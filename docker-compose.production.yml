@@ -1,0 +1,35 @@
+# Production overlay: pin a released image, bind only to loopback for the
+# reverse proxy, resource limits, log rotation.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.production.yml up -d
+services:
+  webmail:
+    image: ghcr.io/your-org/mailcow-webmail:${WEBMAIL_VERSION:-latest}
+    build: null
+    ports:
+      - '127.0.0.1:3000:3000'
+    environment:
+      NODE_ENV: production
+      LOG_FORMAT: json
+      LOG_LEVEL: info
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+    logging:
+      driver: json-file
+      options:
+        max-size: '20m'
+        max-file: '5'
+    # If Mailcow runs on the same host in Docker, join its network so the
+    # webmail can reach dovecot-mailcow / postfix-mailcow by container name:
+    # networks:
+    #   - mailcowdockerized_mailcow-network
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/.next/cache
+
+# networks:
+#   mailcowdockerized_mailcow-network:
+#     external: true

@@ -1,0 +1,15 @@
+node_modules
+.next
+out
+dist
+coverage
+playwright-report
+test-results
+data/*.db
+data/*.db-*
+data/uploads
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store

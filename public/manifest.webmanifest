@@ -1,0 +1,9 @@
+{
+  "name": "Webmail",
+  "short_name": "Webmail",
+  "start_url": "/mail/inbox",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": [{ "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

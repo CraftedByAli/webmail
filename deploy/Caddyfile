@@ -1,0 +1,18 @@
+# Caddy reverse proxy (automatic HTTPS). Replace the hostname.
+webmail.example.com {
+	encode zstd gzip
+	request_body {
+		max_size 64MB
+	}
+	reverse_proxy 127.0.0.1:3000 {
+		header_up X-Forwarded-Host {host}
+		# SSE must stream: Caddy flushes automatically for text/event-stream.
+		flush_interval -1
+		transport http {
+			read_timeout 24h
+		}
+	}
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains"
+	}
+}
