@@ -12,6 +12,12 @@ export const DropdownMenuPortal = DropdownMenuPrimitive.Portal;
 export const DropdownMenuSub = DropdownMenuPrimitive.Sub;
 export const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
 
+const itemClass =
+  'relative flex cursor-default select-none items-center gap-2 rounded-control px-2 py-1.5 text-ui text-fg outline-none transition-colors duration-100 focus:bg-hover data-[disabled]:pointer-events-none data-[disabled]:opacity-45 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-fg-muted';
+
+const surfaceClass =
+  'overlay-in z-50 min-w-44 overflow-y-auto overflow-x-hidden rounded-surface border border-line bg-surface p-1 text-fg shadow-overlay';
+
 export const DropdownMenuSubTrigger = React.forwardRef(function DropdownMenuSubTrigger(
   { className, children, ...props },
   ref
@@ -19,14 +25,11 @@ export const DropdownMenuSubTrigger = React.forwardRef(function DropdownMenuSubT
   return (
     <DropdownMenuPrimitive.SubTrigger
       ref={ref}
-      className={cn(
-        'focus:bg-muted data-[state=open]:bg-muted flex cursor-default items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none select-none',
-        className
-      )}
+      className={cn(itemClass, 'data-[state=open]:bg-hover', className)}
       {...props}
     >
       {children}
-      <ChevronRight className="ml-auto h-4 w-4" />
+      <ChevronRight className="ml-auto" />
     </DropdownMenuPrimitive.SubTrigger>
   );
 });
@@ -38,17 +41,14 @@ export const DropdownMenuSubContent = React.forwardRef(function DropdownMenuSubC
   return (
     <DropdownMenuPrimitive.SubContent
       ref={ref}
-      className={cn(
-        'border-border bg-popover text-popover-foreground shadow-float animate-fade-in z-50 min-w-[10rem] overflow-hidden rounded-lg border p-1',
-        className
-      )}
+      className={cn(surfaceClass, className)}
       {...props}
     />
   );
 });
 
 export const DropdownMenuContent = React.forwardRef(function DropdownMenuContent(
-  { className, sideOffset = 4, ...props },
+  { className, sideOffset = 6, ...props },
   ref
 ) {
   return (
@@ -56,10 +56,7 @@ export const DropdownMenuContent = React.forwardRef(function DropdownMenuContent
       <DropdownMenuPrimitive.Content
         ref={ref}
         sideOffset={sideOffset}
-        className={cn(
-          'border-border bg-popover text-popover-foreground shadow-float animate-fade-in z-50 max-h-[70vh] min-w-[10rem] overflow-x-hidden overflow-y-auto rounded-lg border p-1',
-          className
-        )}
+        className={cn(surfaceClass, 'max-h-[min(24rem,60vh)]', className)}
         {...props}
       />
     </DropdownMenuPrimitive.Portal>
@@ -67,15 +64,16 @@ export const DropdownMenuContent = React.forwardRef(function DropdownMenuContent
 });
 
 export const DropdownMenuItem = React.forwardRef(function DropdownMenuItem(
-  { className, inset, ...props },
+  { className, inset, destructive, ...props },
   ref
 ) {
   return (
     <DropdownMenuPrimitive.Item
       ref={ref}
       className={cn(
-        'focus:bg-muted [&_svg]:text-muted-foreground relative flex cursor-default items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:size-4',
+        itemClass,
         inset && 'pl-8',
+        destructive && 'text-danger focus:bg-danger-subtle focus:text-danger [&_svg]:text-danger',
         className
       )}
       {...props}
@@ -90,16 +88,13 @@ export const DropdownMenuCheckboxItem = React.forwardRef(function DropdownMenuCh
   return (
     <DropdownMenuPrimitive.CheckboxItem
       ref={ref}
-      className={cn(
-        'focus:bg-muted relative flex cursor-default items-center rounded-md py-1.5 pr-2 pl-8 text-sm transition-colors outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
-        className
-      )}
+      className={cn(itemClass, 'pl-7', className)}
       checked={checked}
       {...props}
     >
-      <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+      <span className="absolute left-2 grid size-3.5 place-items-center">
         <DropdownMenuPrimitive.ItemIndicator>
-          <Check className="h-4 w-4" />
+          <Check className="text-accent-text size-3.5" strokeWidth={2.5} />
         </DropdownMenuPrimitive.ItemIndicator>
       </span>
       {children}
@@ -114,15 +109,12 @@ export const DropdownMenuRadioItem = React.forwardRef(function DropdownMenuRadio
   return (
     <DropdownMenuPrimitive.RadioItem
       ref={ref}
-      className={cn(
-        'focus:bg-muted relative flex cursor-default items-center rounded-md py-1.5 pr-2 pl-8 text-sm transition-colors outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
-        className
-      )}
+      className={cn(itemClass, 'pl-7', className)}
       {...props}
     >
-      <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+      <span className="absolute left-2 grid size-3.5 place-items-center">
         <DropdownMenuPrimitive.ItemIndicator>
-          <Check className="h-4 w-4" />
+          <Check className="text-accent-text size-3.5" strokeWidth={2.5} />
         </DropdownMenuPrimitive.ItemIndicator>
       </span>
       {children}
@@ -138,7 +130,7 @@ export const DropdownMenuLabel = React.forwardRef(function DropdownMenuLabel(
     <DropdownMenuPrimitive.Label
       ref={ref}
       className={cn(
-        'text-muted-foreground px-2 py-1.5 text-xs font-semibold',
+        'text-meta text-fg-muted px-2 pt-1.5 pb-1 font-semibold tracking-wide uppercase',
         inset && 'pl-8',
         className
       )}
@@ -154,17 +146,12 @@ export const DropdownMenuSeparator = React.forwardRef(function DropdownMenuSepar
   return (
     <DropdownMenuPrimitive.Separator
       ref={ref}
-      className={cn('bg-border -mx-1 my-1 h-px', className)}
+      className={cn('bg-line -mx-1 my-1 h-px', className)}
       {...props}
     />
   );
 });
 
 export function DropdownMenuShortcut({ className, ...props }) {
-  return (
-    <span
-      className={cn('text-muted-foreground ml-auto text-xs tracking-widest', className)}
-      {...props}
-    />
-  );
+  return <span className={cn('text-meta text-fg-muted ml-auto pl-3', className)} {...props} />;
 }

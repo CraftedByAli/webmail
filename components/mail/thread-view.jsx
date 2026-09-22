@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -17,24 +17,24 @@ import {
   Printer,
 } from 'lucide-react';
 import { apiGet } from '@/utils/api-client';
-import { useThread } from '@/hooks/use-messages';
+import { useThread, threadKey } from '@/hooks/use-messages';
 import { useFolders } from '@/hooks/use-folders';
 import { useMailActions } from '@/hooks/use-mail-actions';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { usePreferences, useSession } from '@/hooks/use-session';
 import { useComposeStore } from '@/stores/compose-store';
 import { IconButton } from '@/components/ui/icon-button';
-import { Button } from '@/components/ui/button';
+import { ToolbarDivider } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState } from '@/components/ui/error-state';
 import { MoveMenu } from '@/components/mail/move-menu';
-import { MessageCard } from '@/components/mail/message-card';
+import { MessageItem } from '@/components/mail/message-item';
 import { QuickReply } from '@/components/mail/quick-reply';
-import { threadKey } from '@/hooks/use-messages';
 
 /**
- * Gmail-style conversation view: every message in the thread as a card, the
- * newest (and unread ones) expanded, with reply actions at the bottom.
+ * A conversation reads as one continuous document: title, then messages
+ * separated by hairlines, then the reply actions. Unread messages and the most
+ * recent message open automatically; everything else collapses to a single row.
  */
 export function ThreadView({ folder, uids, messageUid, backHref, roles }) {
   const router = useRouter();
@@ -45,7 +45,7 @@ export function ThreadView({ folder, uids, messageUid, backHref, roles }) {
   const { data: folderData } = useFolders();
   const openCompose = useComposeStore((s) => s.open);
 
-  // Resolve a single message to its conversation when opened directly.
+  // Opening a single message resolves its conversation first.
   const lookup = useQuery({
     queryKey: ['thread-lookup', folder, messageUid],
     queryFn: () => apiGet(`/api/mail/messages/${messageUid}/thread`, { folder }),
@@ -64,10 +64,8 @@ export function ThreadView({ folder, uids, messageUid, backHref, roles }) {
   const [knownKeys, setKnownKeys] = useState('');
   const [activeUid, setActiveUid] = useState(null);
 
-  // Expand unread + newest messages on first load, and any message that
-  // arrives later (e.g. the reply we just sent) so it is visible immediately.
-  // Computed during render (React's "adjust state on prop change" pattern)
-  // so it never lags a frame behind the data.
+  // Open unread + newest on first load, and anything that arrives later (such
+  // as the reply we just sent). Derived during render so it never lags a frame.
   const keys = messages.map((m) => `${m.folder}:${m.uid}`);
   const keySignature = keys.join('|');
   if (messages.length > 0 && keySignature !== knownKeys) {
@@ -87,8 +85,7 @@ export function ThreadView({ folder, uids, messageUid, backHref, roles }) {
 
   const allExpanded =
     messages.length > 0 && messages.every((m) => expanded.has(`${m.folder}:${m.uid}`));
-  const toggleAll = () =>
-    setExpanded(allExpanded ? new Set() : new Set(messages.map((m) => `${m.folder}:${m.uid}`)));
+  const toggleAll = () => setExpanded(allExpanded ? new Set() : new Set(keys));
   const toggle = (key) =>
     setExpanded((prev) => {
       const next = new Set(prev);
@@ -110,12 +107,12 @@ export function ThreadView({ folder, uids, messageUid, backHref, roles }) {
 
   const latest = messages[messages.length - 1];
   const signature = session?.signatures?.find((s) => s.isDefault)?.html || '';
-  const replyTo = (mode) => {
-    const target = messages.find((m) => m.uid === activeUid) || latest;
-    if (!target) return;
+  const composeFrom = (mode, target) => {
+    const source = target || messages.find((m) => m.uid === activeUid) || latest;
+    if (!source) return;
     openCompose({
       mode,
-      data: { __loadFrom: { folder: target.folder, uid: target.uid, mode, signature } },
+      data: { __loadFrom: { folder: source.folder, uid: source.uid, mode, signature } },
     });
   };
 
@@ -126,9 +123,9 @@ export function ThreadView({ folder, uids, messageUid, backHref, roles }) {
       archive: isTrash ? undefined : withBack(actions.archive),
       delete: withBack(actions.trash),
       spam: withBack(actions.spam),
-      reply: () => replyTo('reply'),
-      replyAll: () => replyTo('replyAll'),
-      forward: () => replyTo('forward'),
+      reply: () => composeFrom('reply'),
+      replyAll: () => composeFrom('replyAll'),
+      forward: () => composeFrom('forward'),
       star: () =>
         starred
           ? actions.unstar(folder, threadUidsInFolder)
@@ -140,10 +137,10 @@ export function ThreadView({ folder, uids, messageUid, backHref, roles }) {
 
   if (error) {
     return (
-      <div className="flex h-full flex-col">
-        <ThreadToolbar onBack={goBack} />
+      <div className="bg-surface flex h-full flex-col">
+        <Toolbar onBack={goBack} />
         <ErrorState
-          title="Unable to open this conversation"
+          title="This conversation could not be opened"
           message={error.message}
           onRetry={() => (uids ? thread.refetch() : lookup.refetch())}
         />
@@ -152,10 +149,10 @@ export function ThreadView({ folder, uids, messageUid, backHref, roles }) {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col" data-testid="thread-view">
-      <ThreadToolbar onBack={goBack}>
+    <div className="bg-surface flex h-full min-h-0 flex-col" data-testid="thread-view">
+      <Toolbar onBack={goBack}>
         {!isTrash ? (
-          <IconButton label="Archive" shortcut="e" onClick={withBack(actions.archive)}>
+          <IconButton label="Archive" shortcut="E" onClick={withBack(actions.archive)}>
             <Archive />
           </IconButton>
         ) : null}
@@ -182,7 +179,7 @@ export function ThreadView({ folder, uids, messageUid, backHref, roles }) {
             <Trash2 />
           </IconButton>
         )}
-        <span className="bg-border mx-1 h-5 w-px" />
+        <ToolbarDivider />
         <IconButton label="Mark as unread" shortcut="⇧U" onClick={withBack(actions.markUnread)}>
           <MailOpen />
         </IconButton>
@@ -198,128 +195,100 @@ export function ThreadView({ folder, uids, messageUid, backHref, roles }) {
           </IconButton>
         </MoveMenu>
         <IconButton
-          label={starred ? 'Unstar' : 'Star'}
-          shortcut="s"
+          label={starred ? 'Unstar conversation' : 'Star conversation'}
+          shortcut="S"
           onClick={() =>
             starred
               ? actions.unstar(folder, threadUidsInFolder)
               : actions.star(folder, threadUidsInFolder)
           }
         >
-          <Star className={starred ? 'fill-star text-star' : ''} />
+          <Star className={starred ? 'fill-star text-star' : undefined} />
         </IconButton>
+
         <div className="ml-auto flex items-center gap-0.5">
           <IconButton
-            label="Print"
+            label="Print conversation"
             className="hidden sm:inline-flex"
             onClick={() => window.print()}
           >
             <Printer />
           </IconButton>
           {messages.length > 1 ? (
-            <IconButton label={allExpanded ? 'Collapse all' : 'Expand all'} onClick={toggleAll}>
+            <IconButton
+              label={allExpanded ? 'Collapse all messages' : 'Expand all messages'}
+              onClick={toggleAll}
+            >
               {allExpanded ? <ChevronsDownUp /> : <ChevronsUpDown />}
             </IconButton>
           ) : null}
         </div>
-      </ThreadToolbar>
+      </Toolbar>
 
       <div className="min-h-0 flex-1 scrollbar-thin overflow-y-auto">
-        <div className="mx-auto w-full max-w-5xl px-3 py-4 sm:px-6">
+        <div className="px-gutter mx-auto w-full max-w-4xl pt-5 pb-16">
           {isLoading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-7 w-2/3" />
-              <Skeleton className="h-40 w-full rounded-2xl" />
-              <Skeleton className="h-64 w-full rounded-2xl" />
+            <div className="grid gap-4">
+              <Skeleton className="h-6 w-2/3" />
+              <Skeleton className="h-3 w-40" />
+              <div className="grid gap-2 pt-6">
+                <Skeleton className="h-3 w-11/12" />
+                <Skeleton className="h-3 w-4/5" />
+                <Skeleton className="h-3 w-3/5" />
+              </div>
             </div>
           ) : (
             <>
-              <h1
-                className="mb-4 flex flex-wrap items-center gap-2 text-xl leading-snug font-semibold sm:text-2xl"
-                data-testid="thread-subject"
-              >
-                {data?.subject || '(no subject)'}
+              <header className="pb-4">
+                <h1 className="text-display text-fg font-semibold" data-testid="thread-subject">
+                  {data?.subject || '(no subject)'}
+                </h1>
                 {messages.length > 1 ? (
-                  <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs font-medium">
-                    {messages.length}
-                  </span>
+                  <p className="text-caption text-fg-muted mt-1">
+                    {messages.length} messages in this conversation
+                  </p>
                 ) : null}
-              </h1>
-              <ol className="space-y-3">
+              </header>
+
+              <div className="border-line border-b">
                 {messages.map((m, index) => {
                   const key = `${m.folder}:${m.uid}`;
                   return (
-                    <li key={key}>
-                      <MessageCard
-                        summary={m}
-                        me={me}
-                        expanded={expanded.has(key)}
-                        isLast={index === messages.length - 1}
-                        onToggle={() => toggle(key)}
-                        onActivate={() => setActiveUid(m.uid)}
-                        onReply={() =>
-                          openCompose({
-                            mode: 'reply',
-                            data: {
-                              __loadFrom: {
-                                folder: m.folder,
-                                uid: m.uid,
-                                mode: 'reply',
-                                signature,
-                              },
-                            },
-                          })
-                        }
-                        onReplyAll={() =>
-                          openCompose({
-                            mode: 'replyAll',
-                            data: {
-                              __loadFrom: {
-                                folder: m.folder,
-                                uid: m.uid,
-                                mode: 'replyAll',
-                                signature,
-                              },
-                            },
-                          })
-                        }
-                        onForward={() =>
-                          openCompose({
-                            mode: 'forward',
-                            data: {
-                              __loadFrom: {
-                                folder: m.folder,
-                                uid: m.uid,
-                                mode: 'forward',
-                                signature,
-                              },
-                            },
-                          })
-                        }
-                        onTrash={() =>
-                          actions
-                            .trash(m.folder, [m.uid])
-                            .then((ok) => ok && messages.length === 1 && goBack())
-                        }
-                        onMarkUnread={() => actions.markUnread(m.folder, [m.uid])}
-                        onStar={(v) =>
-                          v ? actions.star(m.folder, [m.uid]) : actions.unstar(m.folder, [m.uid])
-                        }
-                        prefs={prefs}
-                        threadKey={threadKey(folder, resolvedUids || [])}
-                      />
-                    </li>
+                    <MessageItem
+                      key={key}
+                      summary={m}
+                      me={me}
+                      expanded={expanded.has(key)}
+                      isOnly={index === messages.length - 1}
+                      onToggle={() => toggle(key)}
+                      onActivate={() => setActiveUid(m.uid)}
+                      onReply={() => composeFrom('reply', m)}
+                      onReplyAll={() => composeFrom('replyAll', m)}
+                      onForward={() => composeFrom('forward', m)}
+                      onTrash={() =>
+                        actions
+                          .trash(m.folder, [m.uid])
+                          .then((ok) => ok && messages.length === 1 && goBack())
+                      }
+                      onMarkUnread={() => actions.markUnread(m.folder, [m.uid])}
+                      onStar={(v) =>
+                        v ? actions.star(m.folder, [m.uid]) : actions.unstar(m.folder, [m.uid])
+                      }
+                      prefs={prefs}
+                      threadKey={threadKey(folder, resolvedUids || [])}
+                    />
                   );
                 })}
-              </ol>
+              </div>
+
               {latest ? (
                 <QuickReply
                   message={latest}
                   me={me}
                   defaultReplyAll={prefs?.general?.replyBehavior === 'replyAll'}
-                  onReply={() => replyTo('reply')}
-                  onReplyAll={() => replyTo('replyAll')}
-                  onForward={() => replyTo('forward')}
+                  onReply={() => composeFrom('reply')}
+                  onReplyAll={() => composeFrom('replyAll')}
+                  onForward={() => composeFrom('forward')}
                 />
               ) : null}
             </>
@@ -330,22 +299,19 @@ export function ThreadView({ folder, uids, messageUid, backHref, roles }) {
   );
 }
 
-function ThreadToolbar({ onBack, children }) {
+function Toolbar({ onBack, children }) {
   return (
     <div
-      className="border-border flex h-12 shrink-0 items-center gap-0.5 border-b px-2 sm:px-3"
+      data-chrome
+      className="border-line bg-canvas px-gutter flex h-11 shrink-0 items-center gap-0.5 border-b"
       role="toolbar"
       aria-label="Conversation actions"
     >
-      <IconButton label="Back to list" shortcut="u" onClick={onBack} data-testid="back-button">
+      <IconButton label="Back to list" shortcut="U" onClick={onBack} data-testid="back-button">
         <ArrowLeft />
       </IconButton>
-      <span className="bg-border mx-1 h-5 w-px" />
+      <ToolbarDivider />
       {children}
     </div>
   );
-}
-
-export function ThreadActionsPlaceholder() {
-  return <Button variant="ghost">…</Button>;
 }

@@ -4,11 +4,11 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ArrowLeft, Plus, Search, Pencil, Trash2, Mail, Users } from 'lucide-react';
+import { ArrowLeft, Plus, Search, Pencil, Trash2, Mail } from 'lucide-react';
 import { IconButton } from '@/components/ui/icon-button';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Field } from '@/components/ui/field';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -71,79 +71,98 @@ export function ContactsView() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="border-border flex h-12 shrink-0 items-center gap-2 border-b px-2 sm:px-3">
+    <div className="bg-surface flex h-full min-h-0 flex-col">
+      <div
+        data-chrome
+        className="border-line bg-canvas px-gutter flex h-11 shrink-0 items-center gap-2 border-b"
+      >
         <IconButton label="Back to mail" onClick={() => router.push('/mail/inbox')}>
           <ArrowLeft />
         </IconButton>
-        <h1 className="text-base font-semibold">Contacts</h1>
-        <div className="relative ml-auto w-full max-w-xs">
-          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+        <h1 className="text-title text-fg font-semibold">Contacts</h1>
+        <div className="relative ml-auto w-full max-w-56">
+          <Search
+            className="text-fg-muted pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
+            aria-hidden="true"
+          />
           <Input
             aria-label="Search contacts"
-            placeholder="Search"
-            className="h-9 pl-9"
+            placeholder="Search contacts"
+            className="bg-hover focus-visible:bg-surface border-transparent pl-8"
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
         </div>
-        <Button size="sm" onClick={() => openEditor(null)}>
+        <Button variant="primary" size="sm" onClick={() => openEditor(null)}>
           <Plus /> <span className="hidden sm:inline">New contact</span>
         </Button>
       </div>
 
       <div className="min-h-0 flex-1 scrollbar-thin overflow-y-auto">
         {contacts.isPending ? (
-          <div className="space-y-2 p-4">
+          <div className="px-gutter mx-auto grid max-w-3xl gap-2 py-6">
             {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-14 w-full" />
+              <Skeleton key={i} className="h-12 w-full" />
             ))}
           </div>
         ) : contacts.isError ? (
-          <ErrorState title="Unable to load contacts" onRetry={() => contacts.refetch()} />
+          <ErrorState title="Contacts could not be loaded" onRetry={() => contacts.refetch()} />
         ) : contacts.data.contacts.length === 0 ? (
           <EmptyState
-            icon={Users}
-            title={q ? 'No contacts match' : 'No contacts yet'}
-            description="Addresses you email are suggested automatically. Save contacts here to add names, companies and notes."
+            title={q ? 'No contacts match' : 'No saved contacts'}
+            description={
+              q
+                ? 'Try a different name, address or company.'
+                : 'Addresses you write to are suggested automatically. Save a contact here to add a name, company and notes.'
+            }
             action={
-              <Button onClick={() => openEditor(null)}>
-                <Plus /> New contact
-              </Button>
+              !q ? (
+                <Button variant="default" onClick={() => openEditor(null)}>
+                  <Plus /> New contact
+                </Button>
+              ) : null
             }
           />
         ) : (
-          <ul className="divide-border mx-auto max-w-3xl divide-y p-2 sm:p-4">
+          <ul className="divide-line px-gutter mx-auto max-w-3xl divide-y py-2">
             {contacts.data.contacts.map((c) => (
-              <li key={c.id} className="flex items-center gap-3 py-3">
+              <li key={c.id} className="group flex items-center gap-3 py-2.5">
                 <Avatar address={{ name: c.name, address: c.email }} size="lg" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{c.name || c.email}</p>
-                  <p className="text-muted-foreground truncate text-sm">
+                  <p className="text-body text-fg truncate font-medium">{c.name || c.email}</p>
+                  <p className="text-caption text-fg-secondary truncate">
                     {c.email}
                     {c.company ? ` · ${c.company}` : ''}
                   </p>
                   {c.notes ? (
-                    <p className="text-muted-foreground truncate text-xs">{c.notes}</p>
+                    <p className="text-caption text-fg-muted truncate">{c.notes}</p>
                   ) : null}
                 </div>
-                <IconButton
-                  label={`Email ${c.name || c.email}`}
-                  onClick={() =>
-                    openCompose({ data: { to: [{ name: c.name, address: c.email }] } })
-                  }
-                >
-                  <Mail />
-                </IconButton>
-                <IconButton label={`Edit ${c.name || c.email}`} onClick={() => openEditor(c)}>
-                  <Pencil />
-                </IconButton>
-                <IconButton
-                  label={`Delete ${c.name || c.email}`}
-                  onClick={() => remove.mutate(c.id)}
-                >
-                  <Trash2 />
-                </IconButton>
+                <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                  <IconButton
+                    label={`Write to ${c.name || c.email}`}
+                    size="icon-sm"
+                    onClick={() =>
+                      openCompose({ data: { to: [{ name: c.name, address: c.email }] } })
+                    }
+                  >
+                    <Mail />
+                  </IconButton>
+                  <IconButton
+                    label={`Edit ${c.name || c.email}`}
+                    size="icon-sm"
+                    onClick={() => openEditor(c)}
+                  >
+                    <Pencil />
+                  </IconButton>
+                  <IconButton
+                    label={`Delete ${c.name || c.email}`}
+                    size="icon-sm"
+                    onClick={() => remove.mutate(c.id)}
+                  >
+                    <Trash2 />
+                  </IconButton>
+                </div>
               </li>
             ))}
           </ul>
@@ -162,38 +181,44 @@ export function ContactsView() {
             <DialogHeader>
               <DialogTitle>{form.id ? 'Edit contact' : 'New contact'}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-3">
-              {[
-                ['name', 'Name', 'text'],
-                ['email', 'Email', 'email'],
-                ['company', 'Company', 'text'],
-              ].map(([key, label, type]) => (
-                <div key={key} className="space-y-1.5">
-                  <Label htmlFor={`contact-${key}`}>{label}</Label>
-                  <Input
-                    id={`contact-${key}`}
-                    type={type}
-                    value={form[key]}
-                    required={key === 'email'}
-                    onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                  />
-                </div>
-              ))}
-              <div className="space-y-1.5">
-                <Label htmlFor="contact-notes">Notes</Label>
+            <div className="grid gap-3">
+              <Field label="Email address" htmlFor="contact-email" required>
+                <Input
+                  id="contact-email"
+                  type="email"
+                  value={form.email}
+                  required
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                />
+              </Field>
+              <Field label="Name" htmlFor="contact-name">
+                <Input
+                  id="contact-name"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                />
+              </Field>
+              <Field label="Company" htmlFor="contact-company">
+                <Input
+                  id="contact-company"
+                  value={form.company}
+                  onChange={(e) => setForm({ ...form, company: e.target.value })}
+                />
+              </Field>
+              <Field label="Notes" htmlFor="contact-notes">
                 <Textarea
                   id="contact-notes"
                   value={form.notes}
                   onChange={(e) => setForm({ ...form, notes: e.target.value })}
                 />
-              </div>
+              </Field>
             </div>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setEditing(null)}>
                 Cancel
               </Button>
-              <Button type="submit" loading={save.isPending}>
-                Save
+              <Button type="submit" variant="primary" loading={save.isPending}>
+                Save contact
               </Button>
             </DialogFooter>
           </form>

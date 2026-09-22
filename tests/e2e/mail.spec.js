@@ -43,7 +43,8 @@ test.describe('webmail', () => {
     await expect(compose.getByTestId('compose-subject')).toHaveValue(
       'Re: Welcome to your new webmail'
     );
-    await expect(compose.getByTitle('team@mailcow.example')).toBeVisible();
+    await expect(compose.getByTestId('recipient-to')).toBeVisible();
+    await expect(compose.getByText('Mailcow Team', { exact: true })).toBeVisible();
     await compose.getByTestId('compose-body').click({ position: { x: 10, y: 8 } });
     await page.keyboard.press('Control+Home');
     await page.keyboard.type('Thanks for the warm welcome!');
@@ -54,7 +55,7 @@ test.describe('webmail', () => {
     await expect(compose).toBeHidden();
 
     // The reply appears in the conversation and in Sent.
-    await expect(page.getByTestId('thread-subject')).toContainText('2');
+    await expect(page.getByText('2 messages in this conversation')).toBeVisible();
     await expect(
       page.frameLocator('[data-testid="message-body"]').last().locator('body')
     ).toContainText('Thanks for the warm welcome!');
@@ -93,7 +94,7 @@ test.describe('webmail', () => {
         mimeType: 'text/plain',
         buffer: Buffer.from('quarterly numbers'),
       });
-    await expect(compose.getByText('report.txt')).toBeVisible();
+    await expect(compose.getByRole('listitem').filter({ hasText: 'report.txt' })).toBeVisible();
     await expect(compose.getByText(/Uploading/)).toBeHidden();
     await compose.getByTestId('compose-send').click();
     await expect(page.getByText('Message sent')).toBeVisible();
@@ -102,7 +103,9 @@ test.describe('webmail', () => {
     await expect(row).toBeVisible();
     await expect(row.getByLabel('Has attachment')).toBeVisible();
     await row.click();
-    await expect(page.getByText('report.txt')).toBeVisible();
+    await expect(
+      page.getByRole('listitem').filter({ hasText: 'report.txt' }).first()
+    ).toBeVisible();
     const download = page.waitForEvent('download');
     await page.getByLabel('Download report.txt').click();
     expect((await download).suggestedFilename()).toBe('report.txt');

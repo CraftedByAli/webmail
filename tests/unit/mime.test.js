@@ -17,6 +17,7 @@ import {
 import { parseFullMessage } from '@/lib/mime/parse';
 import { buildMessage } from '@/lib/smtp/compose';
 import { buildFolderModel, detectRole } from '@/lib/imap/folders';
+import { classifyPresentation, splitQuotedContent } from '@/lib/mime/html-analysis';
 
 const structure = {
   type: 'multipart/mixed',
@@ -83,11 +84,14 @@ describe('text decoding', () => {
       'This is a long line\n> quoted text'
     );
   });
-  it('converts text to safe html with links and quotes', () => {
-    const html = textToHtml('see <b>https://example.com/x\n> quoted');
+  it('converts text to safe html with links and grouped quotes', () => {
+    const html = textToHtml('see <b>https://example.com/x\n> quoted\n> more quoted\nafter');
     expect(html).toContain('&lt;b&gt;');
     expect(html).toContain('<a href="https://example.com/x"');
-    expect(html).toContain('<blockquote class="q">quoted</blockquote>');
+    // Consecutive quoted lines collapse into one blockquote so the reply
+    // history can be trimmed as a single block.
+    expect(html).toContain('<blockquote class="wm-quote">quoted<br>more quoted</blockquote>');
+    expect(html).toContain('after');
   });
   it('builds previews from truncated encoded fragments', () => {
     expect(
@@ -193,5 +197,41 @@ describe('folders', () => {
     expect(folders[0].path).toBe('INBOX');
     expect(folders[0].unread).toBe(2);
     expect(folders.find((f) => f.path === 'Trash').role).toBeNull();
+  });
+});
+
+describe('email presentation analysis', () => {
+  it('treats plain correspondence as app-themed', () => {
+    expect(classifyPresentation('<p>Hi, see you at 10.</p>')).toBe('app');
+    expect(classifyPresentation('<div>Thanks!<br><b>Ali</b></div>')).toBe('app');
+  });
+
+  it('treats designed mail as sender-themed so its own colours survive', () => {
+    expect(
+      classifyPresentation('<table width="600" bgcolor="#ffffff"><tr><td>a</td></tr></table>')
+    ).toBe('sender');
+    expect(classifyPresentation('<div style="background-color:#f5f5f5">promo</div>')).toBe(
+      'sender'
+    );
+    expect(classifyPresentation('<div style="background:transparent">plain</div>')).toBe('app');
+  });
+
+  it('splits quoted history from new content', () => {
+    const { main, quoted } = splitQuotedContent(
+      '<p>Sure, that works for me.</p><div class="gmail_quote"><blockquote>Can we meet tomorrow at ten?</blockquote></div>'
+    );
+    expect(main).toBe('<p>Sure, that works for me.</p>');
+    expect(quoted).toContain('Can we meet tomorrow');
+  });
+
+  it('keeps the message whole when there is no meaningful split', () => {
+    expect(
+      splitQuotedContent('<p>No quoted history in this message at all.</p>').quoted
+    ).toBeNull();
+    // A reply with no new text above the quote must not render as empty.
+    expect(
+      splitQuotedContent('<div class="gmail_quote">Only quoted history here, nothing else.</div>')
+        .quoted
+    ).toBeNull();
   });
 });

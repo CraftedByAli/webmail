@@ -21,9 +21,11 @@ function parseTyped(text) {
 }
 
 /**
- * Recipient chips with autocomplete backed by /api/contacts/suggest.
- * Keyboard: Enter/Tab/comma to commit, Backspace to remove the last chip,
- * arrows to move through suggestions.
+ * Address entry as removable chips with suggestions from the address book and
+ * from people the user has actually corresponded with.
+ *
+ * Invalid addresses are kept as chips and marked, rather than silently dropped,
+ * so a typo is visible before sending instead of bouncing afterwards.
  */
 export function RecipientInput({ id, label, value, onChange, autoFocus, trailing }) {
   const [text, setText] = useState('');
@@ -89,34 +91,42 @@ export function RecipientInput({ id, label, value, onChange, autoFocus, trailing
     inputRef.current?.focus();
   }
 
+  const invalidCount = value.filter((v) => v.invalid).length;
+
   return (
-    <div className="border-border/60 flex min-h-10 items-start gap-2 border-t py-1.5 first:border-t-0">
-      <label htmlFor={id} className="text-muted-foreground w-8 shrink-0 pt-1.5 text-sm">
+    <div className="border-line flex min-h-9 items-start gap-2 border-t py-1 first:border-t-0">
+      <label htmlFor={id} className="text-ui text-fg-muted w-12 shrink-0 pt-1.5">
         {label}
       </label>
+
       <div className="relative min-w-0 flex-1">
+        {}
         <div
-          className="flex flex-wrap items-center gap-1"
+          className="flex flex-wrap items-center gap-1 py-0.5"
           onClick={() => inputRef.current?.focus()}
         >
           {value.map((r, i) => (
             <span
               key={`${r.address}-${i}`}
               className={cn(
-                'border-border bg-muted inline-flex max-w-full items-center gap-1 rounded-full border py-0.5 pr-1.5 pl-0.5 text-xs',
-                r.invalid && 'border-destructive/50 bg-destructive/10 text-destructive'
+                'rounded-pill text-caption inline-flex max-w-full items-center gap-1 py-0.5 pr-1 pl-0.5',
+                r.invalid ? 'bg-danger-subtle text-danger' : 'bg-hover text-fg'
               )}
-              title={r.address}
+              title={r.invalid ? `${r.address} is not a valid address` : r.address}
             >
-              <Avatar address={r} size="sm" className="h-5 w-5 text-[9px]" />
+              <Avatar
+                address={r}
+                size="xs"
+                className={cn(r.invalid && 'bg-danger/15 text-danger ring-danger/20')}
+              />
               <span className="truncate">{r.name || r.address}</span>
               <button
                 type="button"
                 aria-label={`Remove ${r.address}`}
-                className="hover:bg-foreground/10 rounded-full p-0.5"
+                className="rounded-pill hover:bg-active focus-visible:outline-focus grid size-4 shrink-0 place-items-center focus-visible:outline-2 focus-visible:outline-offset-1"
                 onClick={() => remove(i)}
               >
-                <X className="h-3 w-3" />
+                <X className="size-3" />
               </button>
             </span>
           ))}
@@ -139,16 +149,25 @@ export function RecipientInput({ id, label, value, onChange, autoFocus, trailing
               if (text.trim()) commit(parseTyped(text));
             }}
             onFocus={() => suggestions.length && setOpen(true)}
-            className="placeholder:text-muted-foreground h-7 min-w-[8rem] flex-1 bg-transparent text-sm outline-none"
-            placeholder={value.length ? '' : 'Recipients'}
+            className="text-ui text-fg placeholder:text-fg-muted h-6 min-w-32 flex-1 bg-transparent outline-none"
+            placeholder={value.length ? '' : 'Add people'}
             data-testid={`recipient-${label.toLowerCase()}`}
           />
         </div>
+
+        {invalidCount > 0 ? (
+          <p className="text-caption text-danger pb-1">
+            {invalidCount === 1
+              ? 'One address is not valid.'
+              : `${invalidCount} addresses are not valid.`}
+          </p>
+        ) : null}
+
         {open && suggestions.length ? (
           <ul
             id={listId}
             role="listbox"
-            className="border-border bg-popover shadow-float animate-fade-in absolute top-full left-0 z-50 mt-1 w-full max-w-md overflow-hidden rounded-xl border"
+            className="overlay-in border-line bg-surface shadow-overlay rounded-surface absolute top-full left-0 z-50 mt-1 w-full max-w-md overflow-hidden border p-1"
           >
             {suggestions.map((s, i) => (
               <li
@@ -162,20 +181,21 @@ export function RecipientInput({ id, label, value, onChange, autoFocus, trailing
                 }}
                 onMouseEnter={() => setActive(i)}
                 className={cn(
-                  'flex cursor-pointer items-center gap-2 px-3 py-2 text-sm',
-                  i === active && 'bg-muted'
+                  'rounded-control flex cursor-pointer items-center gap-2 px-2 py-1.5',
+                  i === active && 'bg-hover'
                 )}
               >
                 <Avatar address={s} size="sm" />
                 <span className="min-w-0">
-                  {s.name ? <span className="block truncate font-medium">{s.name}</span> : null}
-                  <span className="text-muted-foreground block truncate text-xs">{s.address}</span>
+                  {s.name ? <span className="text-ui text-fg block truncate">{s.name}</span> : null}
+                  <span className="text-caption text-fg-muted block truncate">{s.address}</span>
                 </span>
               </li>
             ))}
           </ul>
         ) : null}
       </div>
+
       {trailing ? <div className="shrink-0 pt-1.5">{trailing}</div> : null}
     </div>
   );

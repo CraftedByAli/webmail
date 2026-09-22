@@ -14,10 +14,10 @@ import {
   ChevronDown,
   Loader2,
   Image as ImageIcon,
+  Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
-import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -46,7 +46,11 @@ import { cn } from '@/utils/cn';
 const AUTOSAVE_DELAY_MS = 3000;
 
 /**
- * A single compose window (floating on desktop, full screen on mobile).
+ * A compose window: docked bottom-right on desktop, full screen on mobile.
+ *
+ * The chrome is deliberately plain — a title, window controls, labelled address
+ * rows and one primary Send. Writing is the content; the window should not
+ * compete with it.
  */
 export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
   const { id, data, mode, expanded, showCc, showBcc, loading } = win;
@@ -60,13 +64,13 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
   const [sending, setSending] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
+  const [dragging, setDragging] = useState(false);
   const dataRef = useRef(data);
+  const { uploads, addFiles, removeUpload, uploading } = useAttachmentUploads(id);
+
   useEffect(() => {
     dataRef.current = data;
   }, [data]);
-  const { uploads, addFiles, removeUpload, uploading } = useAttachmentUploads(id);
-  const dropRef = useRef(null);
-  const [dragging, setDragging] = useState(false);
 
   const signatures = session?.signatures || [];
   const title =
@@ -137,11 +141,9 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
     );
   };
 
-  // Debounced autosave.
   const saveDraft = useCallback(
     async ({ silent = true } = {}) => {
-      if (loading || sending) return null;
-      if (isEmpty()) return null;
+      if (loading || sending || isEmpty()) return null;
       update(id, { saving: true });
       try {
         const result = await apiPost('/api/drafts', payload());
@@ -160,7 +162,7 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
         return result;
       } catch (error) {
         update(id, { saving: false });
-        if (!silent) toast.error(error.message || 'Unable to save the draft.');
+        if (!silent) toast.error(error.message || 'The draft could not be saved.');
         return null;
       }
     },
@@ -177,11 +179,11 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
   async function send() {
     const d = dataRef.current;
     if (!d.to.length && !d.cc.length && !d.bcc.length) {
-      toast.error('Add at least one recipient.');
+      toast.error('Add at least one recipient before sending.');
       return;
     }
     if (uploading) {
-      toast.error('Please wait for attachments to finish uploading.');
+      toast.error('Wait for the attachments to finish uploading.');
       return;
     }
     if (uploads.some((u) => u.error)) {
@@ -199,7 +201,7 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
         queryClient.invalidateQueries({ queryKey: ['thread', d.inReplyToRef.folder] });
       close(id);
     } catch (error) {
-      toast.error(error.message || 'Unable to send message. Please try again.');
+      toast.error(error.message || 'The message could not be sent. Please try again.');
       setSending(false);
     }
   }
@@ -213,11 +215,12 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
         queryClient.invalidateQueries({ queryKey: ['messages'] });
         queryClient.invalidateQueries({ queryKey: ['folders'] });
       } catch {
-        // ignore
+        // The window is already closed; a stale draft is harmless.
       }
     }
-    for (const u of uploads)
+    for (const u of uploads) {
       if (u.uploadId) apiDelete('/api/attachments/upload', { id: u.uploadId }).catch(() => {});
+    }
     toast('Draft discarded');
   }
 
@@ -239,7 +242,6 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
     setEditorKey((k) => k + 1);
   }
 
-  // Keyboard: Cmd/Ctrl+Enter to send, Esc to minimise.
   function onKeyDown(e) {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       e.preventDefault();
@@ -254,46 +256,40 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
   if (minimizedBar) {
     return (
       <div
-        className="border-border bg-foreground text-background shadow-float pointer-events-auto flex h-10 w-64 items-center gap-2 rounded-t-xl border px-3 text-sm"
+        className="border-line bg-surface shadow-overlay rounded-t-surface pointer-events-auto flex h-9 w-60 items-center gap-0.5 border border-b-0 pr-1 pl-3"
         role="group"
-        aria-label={`Minimized: ${data.subject || title}`}
+        aria-label={`Minimised message: ${data.subject || title}`}
       >
         <button
           type="button"
-          className="min-w-0 flex-1 truncate text-left font-medium"
+          className="text-ui text-fg min-w-0 flex-1 truncate text-left font-medium"
           onClick={() => minimize(id, false)}
         >
           {data.subject || title}
         </button>
-        <button
-          type="button"
-          aria-label="Restore"
-          className="hover:bg-background/20 rounded p-1"
+        <IconButton
+          label="Restore message"
+          size="icon-xs"
+          tooltip={false}
           onClick={() => minimize(id, false)}
         >
-          <Maximize2 className="h-3.5 w-3.5" />
-        </button>
-        <button
-          type="button"
-          aria-label="Close"
-          className="hover:bg-background/20 rounded p-1"
-          onClick={requestClose}
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
+          <Maximize2 />
+        </IconButton>
+        <IconButton label="Save and close" size="icon-xs" tooltip={false} onClick={requestClose}>
+          <X />
+        </IconButton>
       </div>
     );
   }
 
   const sizeClass = mobile
-    ? 'inset-0 h-full w-full rounded-none'
+    ? 'inset-0 h-full w-full rounded-none border-0'
     : expanded
-      ? 'h-[min(88vh,56rem)] w-[min(92vw,64rem)] rounded-2xl'
-      : 'h-[min(78vh,40rem)] w-[min(92vw,36rem)] rounded-t-2xl';
+      ? 'h-[min(88vh,54rem)] w-[min(92vw,60rem)] rounded-surface'
+      : 'h-[min(80vh,38rem)] w-[min(92vw,34rem)] rounded-t-surface border-b-0';
 
   return (
     <div
-      ref={dropRef}
       role="dialog"
       aria-label={title}
       data-testid="compose-window"
@@ -309,30 +305,30 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
         if (e.dataTransfer.files?.length) addFiles([...e.dataTransfer.files]);
       }}
       className={cn(
-        'border-border bg-popover text-popover-foreground shadow-float animate-slide-up pointer-events-auto relative flex flex-col overflow-hidden border',
+        'border-line bg-surface text-fg shadow-overlay pointer-events-auto relative flex flex-col overflow-hidden border',
         sizeClass,
-        dragging && 'ring-primary ring-2'
+        dragging && 'ring-accent ring-2 ring-inset'
       )}
     >
-      <header className="bg-foreground/95 text-background flex h-11 shrink-0 items-center gap-1 px-3">
-        <h2 className="min-w-0 flex-1 truncate text-sm font-medium">{data.subject || title}</h2>
+      <header className="border-line bg-canvas flex h-10 shrink-0 items-center gap-0.5 border-b pr-1 pl-3">
+        <h2 className="text-ui text-fg min-w-0 flex-1 truncate font-medium">
+          {data.subject || title}
+        </h2>
         {!mobile ? (
           <>
             <IconButton
-              label="Minimize"
+              label="Minimise"
               size="icon-sm"
-              className="text-background hover:bg-background/20 hover:text-background"
-              onClick={() => minimize(id)}
               tooltip={false}
+              onClick={() => minimize(id)}
             >
               <Minus />
             </IconButton>
             <IconButton
               label={expanded ? 'Exit full screen' : 'Full screen'}
               size="icon-sm"
-              className="text-background hover:bg-background/20 hover:text-background"
-              onClick={() => expand(id)}
               tooltip={false}
+              onClick={() => expand(id)}
             >
               {expanded ? <Minimize2 /> : <Maximize2 />}
             </IconButton>
@@ -341,9 +337,8 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
         <IconButton
           label="Save and close"
           size="icon-sm"
-          className="text-background hover:bg-background/20 hover:text-background"
-          onClick={requestClose}
           tooltip={false}
+          onClick={requestClose}
           data-testid="compose-close"
         >
           <X />
@@ -351,12 +346,12 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
       </header>
 
       {loading ? (
-        <div className="text-muted-foreground flex flex-1 items-center justify-center text-sm">
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
+        <div className="text-ui text-fg-muted flex flex-1 items-center justify-center gap-2">
+          <Loader2 className="size-4 animate-spin" /> Loading message…
         </div>
       ) : (
         <>
-          <div className="border-border shrink-0 space-y-0 border-b px-3">
+          <div className="border-line shrink-0 border-b px-3">
             <RecipientInput
               id={`${id}-to`}
               label="To"
@@ -364,11 +359,11 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
               onChange={(to) => updateData(id, { to })}
               autoFocus={mode === 'new' && !data.to.length}
               trailing={
-                <div className="text-muted-foreground flex gap-1 text-xs">
+                <div className="text-caption text-fg-muted flex gap-1.5">
                   {!showCc ? (
                     <button
                       type="button"
-                      className="hover:text-foreground"
+                      className="hover:text-fg focus-visible:outline-focus rounded-tight px-0.5 focus-visible:outline-2 focus-visible:outline-offset-1"
                       onClick={() => update(id, { showCc: true })}
                     >
                       Cc
@@ -377,7 +372,7 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
                   {!showBcc ? (
                     <button
                       type="button"
-                      className="hover:text-foreground"
+                      className="hover:text-fg focus-visible:outline-focus rounded-tight px-0.5 focus-visible:outline-2 focus-visible:outline-offset-1"
                       onClick={() => update(id, { showBcc: true })}
                     >
                       Bcc
@@ -402,23 +397,22 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
                 onChange={(bcc) => updateData(id, { bcc })}
               />
             ) : null}
-            <div className="border-border/60 flex items-center border-t">
-              <label htmlFor={`${id}-subject`} className="sr-only">
+            <div className="border-line flex items-center gap-2 border-t">
+              <label htmlFor={`${id}-subject`} className="text-ui text-fg-muted w-12 shrink-0">
                 Subject
               </label>
-              <Input
+              <input
                 id={`${id}-subject`}
-                placeholder="Subject"
                 value={data.subject}
                 onChange={(e) => updateData(id, { subject: e.target.value })}
-                className="h-10 rounded-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                className="text-ui text-fg placeholder:text-fg-muted h-9 min-w-0 flex-1 bg-transparent outline-none"
                 data-testid="compose-subject"
                 autoFocus={mode !== 'new' && !!data.to.length}
               />
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 scrollbar-thin overflow-y-auto px-3 py-2">
+          <div className="min-h-0 flex-1 scrollbar-thin overflow-y-auto px-3 py-3">
             <RichTextEditor
               key={editorKey}
               initialHtml={data.html}
@@ -441,9 +435,10 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
             ) : null}
           </div>
 
-          <footer className="border-border flex shrink-0 flex-wrap items-center gap-1 border-t px-3 py-2">
+          <footer className="border-line flex shrink-0 items-center gap-1 border-t px-3 py-2">
             <div className="flex items-center">
               <Button
+                variant="primary"
                 onClick={send}
                 loading={sending}
                 disabled={uploading}
@@ -455,8 +450,9 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
-                    aria-label="More send options"
-                    className="border-primary-foreground/30 rounded-l-none border-l px-2"
+                    variant="primary"
+                    aria-label="Send options"
+                    className="border-on-accent/25 rounded-l-none border-l px-1.5"
                   >
                     <ChevronDown />
                   </Button>
@@ -474,7 +470,8 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <label className="cursor-pointer">
+
+            <label className="ml-1 cursor-pointer">
               <input
                 type="file"
                 multiple
@@ -485,11 +482,13 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
                 }}
               />
               <span
-                className="hover:bg-muted inline-flex h-9 w-9 items-center justify-center rounded-lg"
+                className="text-fg-secondary hover:bg-hover hover:text-fg rounded-control grid size-8 place-items-center transition-colors"
                 title="Attach files"
                 aria-label="Attach files"
+                role="button"
+                tabIndex={0}
               >
-                <Paperclip className="h-4 w-4" />
+                <Paperclip className="size-4" />
               </span>
             </label>
             <label className="cursor-pointer">
@@ -503,17 +502,20 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
                 }}
               />
               <span
-                className="hover:bg-muted inline-flex h-9 w-9 items-center justify-center rounded-lg"
+                className="text-fg-secondary hover:bg-hover hover:text-fg rounded-control grid size-8 place-items-center transition-colors"
                 title="Attach image"
                 aria-label="Attach image"
+                role="button"
+                tabIndex={0}
               >
-                <ImageIcon className="h-4 w-4" />
+                <ImageIcon className="size-4" />
               </span>
             </label>
+
             {signatures.length ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-muted-foreground">
+                  <Button variant="ghost" size="sm" className="hidden sm:inline-flex">
                     Signature <ChevronDown />
                   </Button>
                 </DropdownMenuTrigger>
@@ -529,9 +531,22 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : null}
-            <span className="text-muted-foreground ml-auto text-xs" aria-live="polite">
-              {win.saving ? 'Saving…' : win.savedAt ? 'Draft saved' : ''}
+
+            <span
+              className="text-caption text-fg-muted ml-auto flex items-center gap-1 pr-1"
+              aria-live="polite"
+            >
+              {win.saving ? (
+                <>
+                  <Loader2 className="size-3 animate-spin" /> Saving
+                </>
+              ) : win.savedAt ? (
+                <>
+                  <Check className="size-3" /> Draft saved
+                </>
+              ) : null}
             </span>
+
             <IconButton
               label="Discard draft"
               onClick={() => (isEmpty() ? close(id) : setConfirmDiscard(true))}
@@ -547,14 +562,16 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Discard this message?</DialogTitle>
-            <DialogDescription>The draft and its attachments will be deleted.</DialogDescription>
+            <DialogDescription>
+              The draft and any attachments you added will be deleted. This cannot be undone.
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setConfirmDiscard(false)}>
               Keep editing
             </Button>
             <Button
-              variant="destructive"
+              variant="danger"
               onClick={() => {
                 setConfirmDiscard(false);
                 discard();

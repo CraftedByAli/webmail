@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Inbox, Search, Star, FileText, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { MailToolbar } from '@/components/mail/mail-toolbar';
 import { MailRow } from '@/components/mail/mail-row';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ListSkeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { useMessageList } from '@/hooks/use-messages';
 import { useMailActions } from '@/hooks/use-mail-actions';
@@ -19,9 +19,13 @@ import { useComposeStore } from '@/stores/compose-store';
 import { threadHref, messageHref } from '@/utils/mail-routes';
 import { useIsMobile } from '@/hooks/use-media-query';
 
+/** Row heights mirror --row-h in globals.css so skeletons and rows agree. */
+const ROW_HEIGHT = { comfortable: 44, compact: 34, mobile: 68 };
+
 /**
- * Virtualised, infinitely scrolling conversation list with bulk selection,
- * keyboard navigation and optimistic actions.
+ * The message list is the product's centre of gravity: it must stay fast and
+ * scannable at 100k messages. Rows are virtualised, pages stream in on scroll,
+ * and every action applies optimistically with rollback.
  */
 export function MailList({ title, route, folder, folderReady, roles, folders, baseHref }) {
   const router = useRouter();
@@ -38,6 +42,7 @@ export function MailList({ title, route, folder, folderReady, roles, folders, ba
       : prefs?.inbox?.conversationView !== false;
   const pageSize = prefs?.inbox?.pageSize || 50;
   const showPreview = prefs?.inbox?.previewText !== false;
+  const compact = prefs?.appearance?.density === 'compact';
 
   const list = useMessageList({
     folder: folderReady ? folder : null,
@@ -64,7 +69,11 @@ export function MailList({ title, route, folder, folderReady, roles, folders, ba
   }, [folder, route.query, route.role, clearSelection, setFocusedIndex]);
 
   const parentRef = useRef(null);
-  const rowHeight = prefs?.appearance?.density === 'compact' ? 40 : isMobile ? 72 : 52;
+  const rowHeight = isMobile
+    ? ROW_HEIGHT.mobile
+    : compact
+      ? ROW_HEIGHT.compact
+      : ROW_HEIGHT.comfortable;
   const virtualizer = useVirtualizer({
     count: items.length + (list.hasNextPage ? 1 : 0),
     getScrollElement: () => parentRef.current,
@@ -72,7 +81,6 @@ export function MailList({ title, route, folder, folderReady, roles, folders, ba
     overscan: 12,
   });
 
-  // Infinite loading: fetch the next page when the sentinel row is visible.
   const virtualItems = virtualizer.getVirtualItems();
   useEffect(() => {
     const last = virtualItems[virtualItems.length - 1];
@@ -103,18 +111,17 @@ export function MailList({ title, route, folder, folderReady, roles, folders, ba
   const uidsFor = (item) => (item.type === 'thread' ? item.uids : [item.uid]);
   const selectedItems = items.filter((i) => selected.has(i.id));
   const selectionByFolder = groupByFolder(selectedItems);
-
   const runOnSelection = (fn) => {
     for (const [f, uids] of Object.entries(selectionByFolder)) fn(f, uids);
   };
 
-  // Keyboard shortcuts scoped to the list.
   const focused = items[focusedIndex];
   const targetItems = selectedItems.length ? selectedItems : focused ? [focused] : [];
   const targets = groupByFolder(targetItems);
   const forTargets = (fn) => () => {
     for (const [f, uids] of Object.entries(targets)) fn(f, uids);
   };
+
   useKeyboardShortcuts(
     {
       next: () => {
@@ -144,38 +151,21 @@ export function MailList({ title, route, folder, folderReady, roles, folders, ba
     { enabled: prefs?.shortcuts?.enabled !== false }
   );
 
-  const emptyIcon =
-    route.view === 'search'
-      ? Search
-      : route.role === 'starred'
-        ? Star
-        : route.role === 'drafts'
-          ? FileText
-          : Inbox;
-  const emptyTitle =
-    route.view === 'search'
-      ? 'No results'
-      : route.role === 'starred'
-        ? 'No starred messages'
-        : `Nothing in ${title}`;
-  const emptyDescription =
-    route.view === 'search'
-      ? 'Try different keywords or operators like from:, subject: or has:attachment.'
-      : route.role === 'inbox'
-        ? "You're all caught up."
-        : undefined;
+  const noun = conversation ? 'conversation' : 'message';
+  const subtitle = total > 0 ? `${total.toLocaleString()} ${noun}${total === 1 ? '' : 's'}` : null;
+  const empty = emptyCopy(route, title);
 
   return (
-    <div className="flex h-full min-h-0 flex-col" data-testid="mail-list">
+    <div className="bg-surface flex h-full min-h-0 flex-col" data-testid="mail-list">
       <MailToolbar
         title={title}
+        subtitle={route.view === 'search' ? (total > 0 ? `${total} found` : null) : subtitle}
         route={route}
         folder={folder}
         roles={roles}
         folders={folders}
         items={items}
         total={total}
-        loaded={items.length}
         selectedCount={selectedItems.length}
         allSelected={items.length > 0 && selectedItems.length === items.length}
         onSelectAll={(checked) => (checked ? selectMany(items.map((i) => i.id)) : clearSelection())}
@@ -200,24 +190,15 @@ export function MailList({ title, route, folder, folderReady, roles, folders, ba
           retrying={list.isRefetching}
         />
       ) : list.isPending || !folderReady ? (
-        <div className="space-y-px p-2" aria-busy="true" aria-label="Loading messages">
-          {Array.from({ length: 12 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-4 px-3 py-3">
-              <Skeleton className="h-4 w-4" />
-              <Skeleton className="h-4 w-36" />
-              <Skeleton className="h-4 flex-1" />
-              <Skeleton className="h-3 w-12" />
-            </div>
-          ))}
-        </div>
+        <ListSkeleton rows={14} />
       ) : items.length === 0 ? (
-        <EmptyState icon={emptyIcon} title={emptyTitle} description={emptyDescription} />
+        <EmptyState title={empty.title} description={empty.description} />
       ) : (
         <div
           ref={parentRef}
           className="min-h-0 flex-1 scrollbar-thin overflow-y-auto overscroll-contain"
           role="list"
-          aria-label={`${title} conversations`}
+          aria-label={`${title} ${noun}s`}
         >
           <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
             {virtualItems.map((virtualRow) => {
@@ -226,10 +207,10 @@ export function MailList({ title, route, folder, folderReady, roles, folders, ba
                 return (
                   <div
                     key="loader"
-                    className="text-muted-foreground absolute left-0 flex w-full items-center justify-center py-3 text-sm"
+                    className="text-caption text-fg-muted absolute left-0 flex w-full items-center justify-center gap-2"
                     style={{ top: virtualRow.start, height: virtualRow.size }}
                   >
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading more…
+                    <Loader2 className="size-3.5 animate-spin" /> Loading more…
                   </div>
                 );
               }
@@ -275,7 +256,7 @@ export function MailList({ title, route, folder, folderReady, roles, folders, ba
             })}
           </div>
           {list.hasNextPage && !list.isFetchingNextPage ? (
-            <div className="flex justify-center py-3">
+            <div className="border-line flex justify-center border-t py-3">
               <Button variant="ghost" size="sm" onClick={() => list.fetchNextPage()}>
                 Load more
               </Button>
@@ -285,6 +266,46 @@ export function MailList({ title, route, folder, folderReady, roles, folders, ba
       )}
     </div>
   );
+}
+
+/** Empty-state copy that reflects why the view is empty, not a generic blank. */
+function emptyCopy(route, title) {
+  if (route.view === 'search') {
+    return {
+      title: 'No messages match',
+      description:
+        'Try fewer words, or narrow with operators like from:, subject: or has:attachment.',
+    };
+  }
+  switch (route.role) {
+    case 'inbox':
+      return {
+        title: 'Inbox zero',
+        description: 'Nothing new to read. New mail appears here as it arrives.',
+      };
+    case 'starred':
+      return {
+        title: 'No starred messages',
+        description: 'Star a message to keep it within reach.',
+      };
+    case 'drafts':
+      return {
+        title: 'Nothing in Drafts',
+        description: 'Messages you start but do not send are saved here.',
+      };
+    case 'trash':
+      return {
+        title: 'Trash is empty',
+        description: 'Deleted messages stay here until the server removes them.',
+      };
+    case 'junk':
+      return {
+        title: 'No spam',
+        description: 'Messages your server flags as spam are collected here.',
+      };
+    default:
+      return { title: `Nothing in ${title}`, description: null };
+  }
 }
 
 function groupByFolder(items) {

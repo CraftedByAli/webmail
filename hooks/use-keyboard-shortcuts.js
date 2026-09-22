@@ -113,27 +113,51 @@ export function useKeyboardShortcuts(handlers, { enabled = true } = {}) {
   }, [enabled]);
 }
 
-export const SHORTCUT_LIST = [
-  { keys: ['c'], label: 'Compose' },
-  { keys: ['/'], label: 'Search' },
-  { keys: ['j'], label: 'Next conversation' },
-  { keys: ['k'], label: 'Previous conversation' },
-  { keys: ['o', 'Enter'], label: 'Open conversation' },
-  { keys: ['x'], label: 'Select conversation' },
-  { keys: ['u'], label: 'Back to list' },
-  { keys: ['e'], label: 'Archive' },
-  { keys: ['#'], label: 'Delete' },
-  { keys: ['!'], label: 'Report spam' },
-  { keys: ['s'], label: 'Star / unstar' },
-  { keys: ['r'], label: 'Reply' },
-  { keys: ['a'], label: 'Reply all' },
-  { keys: ['f'], label: 'Forward' },
-  { keys: ['Shift', 'i'], label: 'Mark as read' },
-  { keys: ['Shift', 'u'], label: 'Mark as unread' },
-  { keys: ['g', 'i'], label: 'Go to Inbox' },
-  { keys: ['g', 's'], label: 'Go to Starred' },
-  { keys: ['g', 't'], label: 'Go to Sent' },
-  { keys: ['g', 'd'], label: 'Go to Drafts' },
-  { keys: ['Esc'], label: 'Close / clear selection' },
-  { keys: ['?'], label: 'Show shortcuts' },
+/** Grouped for the help dialog and the settings reference. */
+export const SHORTCUT_GROUPS = [
+  {
+    title: 'Navigate',
+    items: [
+      { keys: ['j'], label: 'Next conversation' },
+      { keys: ['k'], label: 'Previous conversation' },
+      { keys: ['o', 'Enter'], label: 'Open conversation' },
+      { keys: ['u'], label: 'Back to list' },
+      { keys: ['g', 'i'], label: 'Go to Inbox', sequence: true },
+      { keys: ['g', 's'], label: 'Go to Starred', sequence: true },
+      { keys: ['g', 't'], label: 'Go to Sent', sequence: true },
+      { keys: ['g', 'd'], label: 'Go to Drafts', sequence: true },
+    ],
+  },
+  {
+    title: 'Triage',
+    items: [
+      { keys: ['x'], label: 'Select conversation' },
+      { keys: ['e'], label: 'Archive' },
+      { keys: ['#'], label: 'Delete' },
+      { keys: ['!'], label: 'Report spam' },
+      { keys: ['s'], label: 'Star or unstar' },
+      { keys: ['Shift', 'i'], label: 'Mark as read', sequence: true },
+      { keys: ['Shift', 'u'], label: 'Mark as unread', sequence: true },
+    ],
+  },
+  {
+    title: 'Write',
+    items: [
+      { keys: ['c'], label: 'Compose' },
+      { keys: ['r'], label: 'Reply' },
+      { keys: ['a'], label: 'Reply all' },
+      { keys: ['f'], label: 'Forward' },
+    ],
+  },
+  {
+    title: 'General',
+    items: [
+      { keys: ['/'], label: 'Search' },
+      { keys: ['Esc'], label: 'Close or clear selection' },
+      { keys: ['?'], label: 'Show this dialog' },
+    ],
+  },
 ];
+
+/** Flat list, used by the settings reference table. */
+export const SHORTCUT_LIST = SHORTCUT_GROUPS.flatMap((g) => g.items);

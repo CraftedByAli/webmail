@@ -9,7 +9,7 @@ export const Tooltip = TooltipPrimitive.Root;
 export const TooltipTrigger = TooltipPrimitive.Trigger;
 
 export const TooltipContent = React.forwardRef(function TooltipContent(
-  { className, sideOffset = 4, ...props },
+  { className, sideOffset = 6, ...props },
   ref
 ) {
   return (
@@ -18,7 +18,7 @@ export const TooltipContent = React.forwardRef(function TooltipContent(
         ref={ref}
         sideOffset={sideOffset}
         className={cn(
-          'bg-foreground text-background animate-fade-in z-50 overflow-hidden rounded-md px-2.5 py-1.5 text-xs shadow-md',
+          'bg-fg text-meta text-fg-inverse rounded-control z-50 flex items-center px-2 py-1 font-medium',
           className
         )}
         {...props}

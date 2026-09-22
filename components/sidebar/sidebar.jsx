@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Pencil, Plus, Settings, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { PenLine, Plus, Settings, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FolderList } from '@/components/sidebar/folder-list';
@@ -13,44 +13,52 @@ import { useComposeStore } from '@/stores/compose-store';
 import { useUiStore } from '@/stores/ui-store';
 import { cn } from '@/utils/cn';
 
+/**
+ * Primary navigation. Folders come straight from the mail server, so the nav
+ * mirrors what the user sees in every other mail client they own.
+ */
 export function Sidebar({ mobile = false }) {
   const { data, isLoading, isError, refetch } = useFolders();
   const openCompose = useComposeStore((s) => s.open);
   const setSidebarOpen = useUiStore((s) => s.setSidebarOpen);
-  const [dialog, setDialog] = useState(null); // { mode: 'create'|'rename'|'delete', folder? }
+  const [dialog, setDialog] = useState(null);
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Folders" className="flex h-full flex-col">
-      <div className="p-3 pb-2">
+    <nav aria-label="Mail folders" className="bg-canvas flex h-full flex-col">
+      <div className="px-2.5 pt-2.5 pb-1">
         <Button
-          variant="compose"
+          variant="primary"
           size="lg"
-          className="w-full justify-start gap-3 rounded-2xl px-5"
+          className="w-full justify-center gap-2"
           onClick={() => {
             setSidebarOpen(false);
             openCompose();
           }}
           data-testid="compose-button"
         >
-          <Pencil className="h-4 w-4" /> Compose
+          <PenLine /> Compose
         </Button>
       </div>
 
-      <div className="flex-1 scrollbar-thin overflow-y-auto px-2 pb-4">
+      <div className="min-h-0 flex-1 scrollbar-thin overflow-y-auto px-2.5 pt-1 pb-4">
         {isLoading ? (
-          <div className="space-y-2 px-2 pt-2">
+          <div className="grid gap-1 pt-1">
             {Array.from({ length: 7 }).map((_, i) => (
-              <Skeleton key={i} className="h-8 w-full" />
+              <Skeleton key={i} className="h-7 w-full" />
             ))}
           </div>
         ) : isError ? (
-          <div className="text-muted-foreground px-3 pt-3 text-sm">
-            Unable to load folders.{' '}
-            <button type="button" className="text-primary underline" onClick={() => refetch()}>
+          <p className="text-caption text-fg-secondary px-2 pt-3">
+            Folders could not be loaded.{' '}
+            <button
+              type="button"
+              className="text-accent-text font-medium underline underline-offset-2"
+              onClick={() => refetch()}
+            >
               Retry
             </button>
-          </div>
+          </p>
         ) : (
           <FolderList
             folders={data.folders}
@@ -58,26 +66,13 @@ export function Sidebar({ mobile = false }) {
             onRename={(f) => setDialog({ mode: 'rename', folder: f })}
             onDelete={(f) => setDialog({ mode: 'delete', folder: f })}
             onCreateChild={(f) => setDialog({ mode: 'create', parent: f })}
+            onCreate={() => setDialog({ mode: 'create' })}
           />
         )}
-
-        <div className="mt-3 flex items-center justify-between px-3">
-          <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-            Labels
-          </span>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Create folder"
-            onClick={() => setDialog({ mode: 'create' })}
-          >
-            <Plus />
-          </Button>
-        </div>
       </div>
 
       {mobile ? (
-        <div className="border-border border-t p-2">
+        <div className="border-line grid gap-0.5 border-t p-2.5">
           <SidebarLink href="/contacts" icon={Users} active={pathname.startsWith('/contacts')}>
             Contacts
           </SidebarLink>
@@ -97,11 +92,15 @@ function SidebarLink({ href, icon: Icon, active, children }) {
     <Link
       href={href}
       className={cn(
-        'hover:bg-muted flex items-center gap-3 rounded-lg px-3 py-2 text-sm',
-        active && 'bg-accent text-accent-foreground font-medium'
+        'text-ui rounded-control flex h-7 items-center gap-2.5 px-2 transition-colors duration-100',
+        active
+          ? 'bg-accent-subtle text-accent-text font-medium'
+          : 'text-fg-secondary hover:bg-hover hover:text-fg'
       )}
     >
-      <Icon className="h-4 w-4" /> {children}
+      <Icon className="size-4" /> {children}
     </Link>
   );
 }
+
+export { Plus };

@@ -10,16 +10,20 @@ export const Checkbox = React.forwardRef(function Checkbox({ className, ...props
     <CheckboxPrimitive.Root
       ref={ref}
       className={cn(
-        'peer border-muted-foreground/60 bg-surface focus-visible:ring-ring data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground data-[state=indeterminate]:border-primary data-[state=indeterminate]:bg-primary data-[state=indeterminate]:text-primary-foreground h-4 w-4 shrink-0 rounded-[4px] border shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50',
+        'peer border-line-strong bg-surface text-on-accent rounded-tight grid size-4 shrink-0 place-items-center border transition-colors duration-100',
+        'hover:border-accent focus-visible:outline-focus focus-visible:outline-2 focus-visible:outline-offset-1',
+        'data-[state=checked]:border-accent data-[state=checked]:bg-accent',
+        'data-[state=indeterminate]:border-accent data-[state=indeterminate]:bg-accent',
+        'disabled:cursor-not-allowed disabled:opacity-45',
         className
       )}
       {...props}
     >
-      <CheckboxPrimitive.Indicator className="flex items-center justify-center text-current">
+      <CheckboxPrimitive.Indicator className="grid place-items-center text-current">
         {props.checked === 'indeterminate' ? (
-          <Minus className="h-3 w-3" />
+          <Minus className="size-3" strokeWidth={3} />
         ) : (
-          <Check className="h-3 w-3" />
+          <Check className="size-3" strokeWidth={3} />
         )}
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>

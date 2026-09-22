@@ -3,10 +3,11 @@
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Kbd } from '@/components/ui/kbd';
 
 /**
- * Icon-only button with a mandatory accessible label rendered as both an
- * aria-label and a tooltip.
+ * Icon-only control. `label` is mandatory: it becomes both the accessible name
+ * and the tooltip, so an icon never ships without a text equivalent.
  */
 export const IconButton = React.forwardRef(function IconButton(
   {
@@ -31,11 +32,9 @@ export const IconButton = React.forwardRef(function IconButton(
     <Tooltip>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
       <TooltipContent side={side}>
-        {label}
+        <span>{label}</span>
         {shortcut ? (
-          <kbd className="border-border bg-muted text-muted-foreground ml-2 rounded border px-1 font-mono text-[10px]">
-            {shortcut}
-          </kbd>
+          <Kbd className="ml-1.5 border-white/25 bg-white/10 text-inherit">{shortcut}</Kbd>
         ) : null}
       </TooltipContent>
     </Tooltip>

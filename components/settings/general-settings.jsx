@@ -39,10 +39,13 @@ export function GeneralSettings({ session }) {
 
   return (
     <>
-      <SettingsSection title="General" description="Identity and locale.">
+      <SettingsSection
+        title="General"
+        description="How you appear to recipients, and how dates are shown to you."
+      >
         <SettingRow
           label="Display name"
-          description="Shown as the sender name on messages you send."
+          description="Recipients see this next to your address."
           htmlFor="displayName"
         >
           <Input
@@ -54,8 +57,8 @@ export function GeneralSettings({ session }) {
             }
           />
         </SettingRow>
-        <SettingRow label="Email address" description="Your Mailcow mailbox.">
-          <Input value={session.user.email} readOnly disabled />
+        <SettingRow label="Mailbox" description="The account these settings belong to.">
+          <p className="text-ui text-fg-secondary truncate">{session.user.email}</p>
         </SettingRow>
         <SettingRow label="Language" htmlFor="language">
           <Select value={prefs.language} onValueChange={(v) => set({ language: v })}>

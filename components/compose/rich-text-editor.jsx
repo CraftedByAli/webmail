@@ -117,6 +117,7 @@ export function RichTextEditor({ initialHtml, onChange, placeholder, autoFocus, 
       active: editor.isActive('strike'),
       run: () => editor.chain().focus().toggleStrike().run(),
     },
+    { divider: true },
     {
       label: 'Bulleted list',
       icon: List,
@@ -155,32 +156,37 @@ export function RichTextEditor({ initialHtml, onChange, placeholder, autoFocus, 
     <div>
       <div
         role="toolbar"
-        aria-label="Formatting"
-        className="bg-muted/60 mb-2 flex flex-wrap items-center gap-0.5 rounded-lg p-1"
+        aria-label="Text formatting"
+        className="border-line mb-3 flex flex-wrap items-center gap-px border-b pb-2"
       >
-        {tools.map((t) => (
-          <button
-            key={t.label}
-            type="button"
-            aria-label={t.label}
-            aria-pressed={t.active}
-            title={t.label}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={t.run}
-            className={cn(
-              'text-muted-foreground hover:bg-surface hover:text-foreground rounded-md p-1.5',
-              t.active && 'bg-surface text-foreground shadow-sm'
-            )}
-          >
-            <t.icon className="h-4 w-4" />
-          </button>
-        ))}
-        <label className="text-muted-foreground ml-1 flex items-center gap-1 text-xs">
+        {tools.map((t, i) =>
+          t.divider ? (
+            <span key={`d${i}`} aria-hidden="true" className="bg-line mx-1 h-4 w-px" />
+          ) : (
+            <button
+              key={t.label}
+              type="button"
+              aria-label={t.label}
+              aria-pressed={t.active}
+              title={t.label}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={t.run}
+              className={cn(
+                'text-fg-secondary rounded-control grid size-7 place-items-center transition-colors duration-100',
+                'hover:bg-hover hover:text-fg focus-visible:outline-focus focus-visible:outline-2 focus-visible:outline-offset-1',
+                t.active && 'bg-hover text-fg'
+              )}
+            >
+              <t.icon className="size-4" />
+            </button>
+          )
+        )}
+        <label className="hover:bg-hover rounded-control ml-1 grid size-7 cursor-pointer place-items-center">
           <span className="sr-only">Text colour</span>
           <input
             type="color"
             aria-label="Text colour"
-            className="h-6 w-6 cursor-pointer rounded border-0 bg-transparent p-0"
+            className="rounded-tight size-4 cursor-pointer border-0 bg-transparent p-0"
             onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
           />
         </label>

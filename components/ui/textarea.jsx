@@ -6,7 +6,10 @@ export const Textarea = React.forwardRef(function Textarea({ className, ...props
     <textarea
       ref={ref}
       className={cn(
-        'border-input bg-surface placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/30 flex min-h-[80px] w-full rounded-lg border px-3 py-2 text-sm shadow-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50',
+        'border-line-strong bg-surface text-ui text-fg rounded-control min-h-16 w-full border px-2.5 py-1.5 transition-colors duration-100',
+        'placeholder:text-fg-muted',
+        'focus-visible:border-accent focus-visible:outline-focus focus-visible:outline-2 focus-visible:outline-offset-[-1px]',
+        'disabled:bg-sunken disabled:cursor-not-allowed',
         className
       )}
       {...props}

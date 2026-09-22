@@ -11,32 +11,37 @@ import {
   Star,
   ChevronDown,
   Inbox,
-  Menu,
+  PanelLeft,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { IconButton } from '@/components/ui/icon-button';
-import { Button } from '@/components/ui/button';
+import { ToolbarDivider } from '@/components/ui/separator';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { MoveMenu } from '@/components/mail/move-menu';
 import { useUiStore } from '@/stores/ui-store';
 import { cn } from '@/utils/cn';
 
+/**
+ * A single action bar, not a stack of headers.
+ *
+ * It has two modes that occupy the same 44px: browsing (title + count) and
+ * selection (bulk actions + count). Switching modes in place keeps the list
+ * from shifting vertically when the user checks a box.
+ */
 export function MailToolbar({
   title,
+  subtitle,
   route,
   folder,
   roles,
   folders,
   items,
   total,
-  loaded,
   selectedCount,
   allSelected,
   onSelectAll,
@@ -61,24 +66,35 @@ export function MailToolbar({
   const isDrafts = route.role === 'drafts';
 
   return (
-    <div className="border-border flex h-12 shrink-0 items-center gap-1 border-b px-2 sm:px-3">
-      <IconButton label="Open menu" className="md:hidden" onClick={toggleSidebar} tooltip={false}>
-        <Menu />
+    <div
+      data-chrome
+      className="border-line bg-canvas px-gutter flex h-11 shrink-0 items-center gap-1 border-b"
+    >
+      <IconButton
+        label="Show folders"
+        className="md:hidden"
+        onClick={toggleSidebar}
+        tooltip={false}
+      >
+        <PanelLeft />
       </IconButton>
-      <div className="hidden items-center sm:flex">
-        <Checkbox
-          checked={allSelected ? true : hasSelection ? 'indeterminate' : false}
-          onCheckedChange={(v) => onSelectAll(v === true)}
-          aria-label="Select all"
-        />
+
+      <div className="flex shrink-0 items-center gap-0.5 pr-1">
+        <span className="hidden sm:block">
+          <Checkbox
+            checked={allSelected ? true : hasSelection ? 'indeterminate' : false}
+            onCheckedChange={(v) => onSelectAll(v === true)}
+            aria-label={allSelected ? 'Deselect all conversations' : 'Select all conversations'}
+          />
+        </span>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               type="button"
               aria-label="Selection options"
-              className="text-muted-foreground hover:text-foreground rounded p-0.5"
+              className="text-fg-muted hover:text-fg focus-visible:outline-focus rounded-tight hidden size-5 place-items-center transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 sm:grid"
             >
-              <ChevronDown className="h-4 w-4" />
+              <ChevronDown className="size-3.5" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
@@ -125,12 +141,12 @@ export function MailToolbar({
 
       {hasSelection ? (
         <div
-          className="animate-fade-in flex items-center gap-0.5"
+          className="flex min-w-0 flex-1 items-center gap-0.5"
           role="toolbar"
           aria-label="Bulk actions"
         >
           {!isTrash && !isDrafts ? (
-            <IconButton label="Archive" shortcut="e" onClick={onArchive}>
+            <IconButton label="Archive" shortcut="E" onClick={onArchive}>
               <Archive />
             </IconButton>
           ) : null}
@@ -157,48 +173,48 @@ export function MailToolbar({
               <Trash2 />
             </IconButton>
           )}
-          <span className="bg-border mx-1 h-5 w-px" />
-          <IconButton label="Mark as read" shortcut="⇧I" onClick={onRead}>
-            <MailOpen />
-          </IconButton>
-          <IconButton label="Mark as unread" shortcut="⇧U" onClick={onUnread}>
-            <Mail />
-          </IconButton>
-          <IconButton label="Star" shortcut="s" onClick={onStar}>
-            <Star />
-          </IconButton>
-          <MoveMenu folders={folders} currentFolder={folder} onMove={onMove}>
-            <IconButton label="Move to">
-              <FolderInput />
+          <ToolbarDivider className="hidden sm:block" />
+          <span className="hidden items-center gap-0.5 sm:flex">
+            <IconButton label="Mark as read" shortcut="⇧I" onClick={onRead}>
+              <MailOpen />
             </IconButton>
-          </MoveMenu>
-          <span className="text-muted-foreground ml-2 text-sm">{selectedCount} selected</span>
+            <IconButton label="Mark as unread" shortcut="⇧U" onClick={onUnread}>
+              <Mail />
+            </IconButton>
+            <IconButton label="Star" shortcut="S" onClick={onStar}>
+              <Star />
+            </IconButton>
+            <MoveMenu folders={folders} currentFolder={folder} onMove={onMove}>
+              <IconButton label="Move to">
+                <FolderInput />
+              </IconButton>
+            </MoveMenu>
+          </span>
+          <span
+            className="text-caption text-fg-secondary ml-auto pl-2 whitespace-nowrap"
+            aria-live="polite"
+          >
+            {selectedCount} selected
+          </span>
         </div>
       ) : (
-        <>
-          <h1 className={cn('truncate px-1 text-base font-semibold sm:px-2')}>{title}</h1>
-          <IconButton label="Refresh" onClick={onRefresh} disabled={refreshing}>
-            <RefreshCw className={cn(refreshing && 'animate-spin')} />
-          </IconButton>
-        </>
+        <div className="flex min-w-0 flex-1 items-baseline gap-2">
+          <h1 className="text-title text-fg truncate font-semibold">{title}</h1>
+          {subtitle ? (
+            <span
+              className="text-caption text-fg-muted hidden shrink-0 truncate sm:inline"
+              aria-live="polite"
+            >
+              {subtitle}
+            </span>
+          ) : null}
+          <div className="ml-auto flex shrink-0 items-center">
+            <IconButton label="Refresh" onClick={onRefresh} disabled={refreshing}>
+              <RefreshCw className={cn(refreshing && 'animate-spin')} />
+            </IconButton>
+          </div>
+        </div>
       )}
-
-      <div className="text-muted-foreground ml-auto hidden items-center gap-2 text-xs sm:flex">
-        {total > 0 ? (
-          <span aria-live="polite">
-            1–{Math.min(loaded, total)} of {total.toLocaleString()}
-          </span>
-        ) : null}
-      </div>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="ml-auto sm:hidden"
-        onClick={onSelectAll.bind(null, !allSelected)}
-        aria-label={allSelected ? 'Deselect all' : 'Select all'}
-      >
-        {allSelected ? 'None' : 'Select'}
-      </Button>
     </div>
   );
 }

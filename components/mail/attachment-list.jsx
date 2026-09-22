@@ -8,12 +8,12 @@ import {
   File,
   FileArchive,
   FileSpreadsheet,
-  Eye,
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { formatBytes } from '@/utils/format';
+import { cn } from '@/utils/cn';
 
 const PREVIEWABLE = /^(image\/(png|jpe?g|gif|webp|bmp)|application\/pdf|text\/plain)$/i;
 
@@ -25,59 +25,79 @@ function iconFor(type = '') {
   return File;
 }
 
+/**
+ * Attachments read as a list of files, not a row of decorative tiles. The whole
+ * row is the download target; preview is a secondary action where it is safe.
+ */
 export function AttachmentList({ attachments }) {
   const [preview, setPreview] = useState(null);
+
   return (
-    <section className="border-border/70 mt-4 border-t pt-3 print:hidden" aria-label="Attachments">
-      <h3 className="text-muted-foreground mb-2 text-xs font-medium">
-        {attachments.length} attachment{attachments.length > 1 ? 's' : ''}
+    <section className="border-line mt-5 border-t pt-3 print:hidden" aria-label="Attachments">
+      <h3 className="text-meta text-fg-muted mb-2 font-semibold tracking-wide uppercase">
+        {attachments.length} attachment{attachments.length === 1 ? '' : 's'}
       </h3>
-      <ul className="flex flex-wrap gap-2">
+      <ul className="grid max-w-md gap-0.5">
         {attachments.map((a) => {
           const Icon = iconFor(a.contentType);
           const canPreview = PREVIEWABLE.test(a.contentType) && a.size < 25 * 1024 * 1024;
-          const downloadUrl = `${a.url}&download=1`;
           return (
-            <li
-              key={a.part}
-              className="border-border bg-surface-raised flex max-w-full items-center gap-2 rounded-xl border px-3 py-2 text-sm shadow-sm"
-            >
-              <Icon className="text-muted-foreground h-5 w-5 shrink-0" aria-hidden="true" />
-              <div className="min-w-0">
-                <p className="truncate font-medium" title={a.filename}>
-                  {a.filename}
-                </p>
-                <p className="text-muted-foreground text-xs">{formatBytes(a.size)}</p>
-              </div>
-              <div className="ml-1 flex shrink-0 items-center">
-                {canPreview ? (
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={`Preview ${a.filename}`}
-                    onClick={() => setPreview(a)}
+            <li key={a.part}>
+              <div className="group hover:bg-hover rounded-control flex items-center gap-2.5 py-1.5 pr-1 pl-1.5 transition-colors duration-100">
+                <Icon className="text-fg-muted size-4 shrink-0" aria-hidden="true" />
+                <a
+                  href={`${a.url}&download=1`}
+                  download={a.filename}
+                  className="focus-visible:outline-focus flex min-w-0 flex-1 items-baseline gap-2 focus-visible:outline-2 focus-visible:outline-offset-2"
+                >
+                  <span
+                    className="text-ui text-fg truncate group-hover:underline"
+                    title={a.filename}
                   >
-                    <Eye />
+                    {a.filename}
+                  </span>
+                  <span className="text-meta text-fg-muted shrink-0" data-numeric>
+                    {formatBytes(a.size)}
+                  </span>
+                </a>
+                <div className="flex shrink-0 items-center gap-0.5">
+                  {canPreview ? (
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                      onClick={() => setPreview(a)}
+                    >
+                      Preview
+                      <span className="sr-only"> {a.filename}</span>
+                    </Button>
+                  ) : null}
+                  <Button variant="ghost" size="icon-xs" asChild>
+                    <a
+                      href={`${a.url}&download=1`}
+                      download={a.filename}
+                      aria-label={`Download ${a.filename}`}
+                    >
+                      <Download />
+                    </a>
                   </Button>
-                ) : null}
-                <Button variant="ghost" size="icon-sm" asChild>
-                  <a href={downloadUrl} download={a.filename} aria-label={`Download ${a.filename}`}>
-                    <Download />
-                  </a>
-                </Button>
+                </div>
               </div>
             </li>
           );
         })}
       </ul>
+
       <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
-        <DialogContent className="h-[85vh] max-w-4xl gap-2 p-3" hideClose>
+        <DialogContent className="flex h-[86vh] max-w-4xl flex-col gap-3 p-3" hideClose>
           {preview ? (
             <>
-              <div className="flex items-center justify-between gap-2 px-1">
-                <DialogTitle className="truncate text-sm">{preview.filename}</DialogTitle>
-                <div className="flex items-center gap-1">
-                  <Button variant="outline" size="sm" asChild>
+              <div className="flex items-center justify-between gap-2 pl-1">
+                <DialogTitle className="text-ui truncate font-medium">
+                  {preview.filename}
+                </DialogTitle>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button variant="default" size="sm" asChild>
                     <a href={`${preview.url}&download=1`} download={preview.filename}>
                       <Download /> Download
                     </a>
@@ -104,11 +124,12 @@ export function AttachmentList({ attachments }) {
 function AttachmentPreview({ attachment }) {
   const [failed, setFailed] = useState(false);
   const url = `${attachment.url}&download=0`;
+
   if (failed) {
     return (
-      <div className="text-muted-foreground flex flex-1 flex-col items-center justify-center gap-3 text-sm">
-        Preview unavailable.
-        <Button asChild>
+      <div className="text-body text-fg-secondary flex flex-1 flex-col items-center justify-center gap-3">
+        <p>This file cannot be previewed in the browser.</p>
+        <Button variant="primary" asChild>
           <a href={`${attachment.url}&download=1`} download={attachment.filename}>
             <Download /> Download instead
           </a>
@@ -116,24 +137,28 @@ function AttachmentPreview({ attachment }) {
       </div>
     );
   }
+
   if (attachment.contentType.startsWith('image/')) {
-    // eslint-disable-next-line @next/next/no-img-element
     return (
-      <img
-        src={url}
-        alt={attachment.filename}
-        className="mx-auto max-h-full max-w-full object-contain"
-        onError={() => setFailed(true)}
-      />
+      <div className="bg-sunken rounded-control grid min-h-0 flex-1 place-items-center overflow-auto">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={url}
+          alt={attachment.filename}
+          className="max-h-full max-w-full object-contain"
+          onError={() => setFailed(true)}
+        />
+      </div>
     );
   }
-  // Only inline-safe types (PDF, text) are ever served with an inline
-  // disposition by the server; everything else is forced to download.
+
+  // Only inline-safe types (PDF, plain text) are ever served inline by the
+  // server; everything else is forced to download.
   return (
     <iframe
       title={attachment.filename}
       src={url}
-      className="border-border h-full w-full flex-1 rounded-lg border bg-white"
+      className={cn('border-line rounded-control min-h-0 w-full flex-1 border bg-white')}
       onError={() => setFailed(true)}
     />
   );
