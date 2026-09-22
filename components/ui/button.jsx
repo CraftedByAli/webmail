@@ -20,7 +20,7 @@ export const buttonVariants = cva(
         default: 'border border-line-strong bg-surface text-fg hover:bg-hover',
         subtle: 'bg-accent-subtle text-accent-text hover:bg-accent-subtle-strong',
         ghost: 'text-fg-secondary hover:bg-hover hover:text-fg',
-        danger: 'bg-danger text-white hover:bg-danger-hover',
+        danger: 'bg-danger text-on-danger hover:bg-danger-hover',
         'danger-ghost': 'text-danger hover:bg-danger-subtle',
         link: 'text-accent-text underline underline-offset-2 hover:text-accent-hover',
       },

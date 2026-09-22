@@ -27,7 +27,9 @@
 
   --text: 222 24% 11%;
   --text-secondary: 220 9% 40%;
-  --text-muted: 220 8% 52%;
+  /* 45%, not 52%: muted carries real content (timestamps, sizes, counts) at
+     11-12px, and 52% only reached 3.9:1 on the content surface. */
+  --text-muted: 220 9% 45%;
   --text-inverse: 0 0% 100%;
 
   --line: 220 16% 90%;
@@ -49,6 +51,7 @@
   --danger: 358 62% 46%;
   --danger-hover: 358 62% 40%;
   --danger-subtle: 358 72% 96%;
+  --on-danger: 0 0% 100%;
   --info: 216 78% 42%;
   --info-subtle: 216 70% 95%;
 
@@ -74,7 +77,9 @@
 
   --text: 220 18% 93%;
   --text-secondary: 220 10% 66%;
-  --text-muted: 220 8% 54%;
+  /* 58%, not 54%: muted has to clear 4.5:1 against --surface-hover as well as
+     --surface, or every hovered row drops below AA. */
+  --text-muted: 220 8% 58%;
   --text-inverse: 222 24% 11%;
 
   --line: 222 12% 19%;
@@ -94,6 +99,8 @@
   --danger: 358 78% 68%;
   --danger-hover: 358 78% 74%;
   --danger-subtle: 358 44% 18%;
+  /* The dark-mode danger fill is a light red; white on it is 2.6:1. */
+  --on-danger: 358 45% 12%;
   --info: 213 92% 66%;
   --info-subtle: 216 60% 18%;
 
@@ -136,6 +143,7 @@
   --color-danger: hsl(var(--danger));
   --color-danger-hover: hsl(var(--danger-hover));
   --color-danger-subtle: hsl(var(--danger-subtle));
+  --color-on-danger: hsl(var(--on-danger));
   --color-info: hsl(var(--info));
   --color-info-subtle: hsl(var(--info-subtle));
   --color-star: hsl(var(--star));

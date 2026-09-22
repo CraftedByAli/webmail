@@ -216,6 +216,40 @@ describe('email presentation analysis', () => {
     expect(classifyPresentation('<div style="background:transparent">plain</div>')).toBe('app');
   });
 
+  it('does not treat a white background as a design', () => {
+    // Outlook and Word stamp these onto ordinary replies; reading them as
+    // sender-designed puts a white sheet in the middle of dark mode.
+    expect(classifyPresentation('<div style="background-color:#ffffff">Thanks, Ali</div>')).toBe(
+      'app'
+    );
+    expect(classifyPresentation('<body bgcolor="#FFFFFF"><p>See you at ten.</p></body>')).toBe(
+      'app'
+    );
+    expect(classifyPresentation('<div style="background:white">Sounds good.</div>')).toBe('app');
+    expect(classifyPresentation('<td style="background-color: rgb(255, 255, 255)">Hi</td>')).toBe(
+      'app'
+    );
+  });
+
+  it('treats a highlight on a run of text as text, not layout', () => {
+    expect(
+      classifyPresentation(
+        '<p>Due <span style="background-color:yellow">Friday</span>, thanks.</p>'
+      )
+    ).toBe('app');
+  });
+
+  it('still reads real template shells as sender-designed', () => {
+    expect(classifyPresentation('<table width="600"><tr><td>Newsletter</td></tr></table>')).toBe(
+      'sender'
+    );
+    expect(
+      classifyPresentation('<table style="width:640px"><tr><td>Newsletter</td></tr></table>')
+    ).toBe('sender');
+    // A narrow table is a spacer, not a template shell.
+    expect(classifyPresentation('<table width="20"><tr><td>x</td></tr></table>')).toBe('app');
+  });
+
   it('splits quoted history from new content', () => {
     const { main, quoted } = splitQuotedContent(
       '<p>Sure, that works for me.</p><div class="gmail_quote"><blockquote>Can we meet tomorrow at ten?</blockquote></div>'
