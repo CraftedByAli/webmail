@@ -157,12 +157,16 @@ function buildDocument(html, { allowExternal, dark, senderStyled, quoted }) {
    * For 'app' mail we neutralise author colours. Without this a message that
    * hardcodes `color:#000` renders black-on-black the moment the reader
    * switches to dark mode — the single most common webmail rendering bug.
-   * Links keep their own colour so they stay recognisable as links.
+   *
+   * Only links are exempt, so that they stay recognisable as links. `pre` and
+   * `code` are deliberately not: a `<pre style="color:#111">` handed its own
+   * dark colour is the same black-on-black bug, and children of an exempt
+   * element inherit from it, so exempting one hides a whole subtree.
    */
   const neutralise = senderStyled
     ? ''
     : `
-body *:not(a):not(code):not(pre) { color: inherit !important; }
+body *:not(a) { color: inherit !important; }
 body *[style*="background"] { background-color: transparent !important; background-image: none !important; }
 body font[color] { color: inherit !important; }`;
 
