@@ -3,11 +3,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Monitor, LogOut, ShieldCheck, ShieldX } from 'lucide-react';
+import { Monitor, Smartphone, LogOut, Check, X } from 'lucide-react';
 import { SettingsSection } from '@/components/settings/settings-primitives';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { InlineError } from '@/components/ui/error-state';
 import { apiDelete, apiGet, apiPost } from '@/utils/api-client';
 import { formatFullDate, formatRelative } from '@/utils/format';
 
@@ -30,6 +31,7 @@ export function SecuritySettings() {
     },
     onError: (e) => toast.error(e.message),
   });
+
   const revokeAll = useMutation({
     mutationFn: () => apiPost('/api/auth/logout-all'),
     onSuccess: () => router.replace('/login'),
@@ -42,78 +44,82 @@ export function SecuritySettings() {
     <>
       <SettingsSection
         title="Active sessions"
-        description="Devices currently signed in to this mailbox."
+        description="Every browser currently signed in to this mailbox. Revoking a session signs it out immediately."
       >
         {sessions.isPending ? (
-          <div className="space-y-2 p-4">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
+          <div className="grid gap-2">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
           </div>
         ) : sessions.isError ? (
-          <p className="text-destructive p-4 text-sm">Unable to load sessions.</p>
+          <InlineError message="Sessions could not be loaded." onRetry={() => sessions.refetch()} />
         ) : (
-          sessions.data.sessions.map((s) => (
-            <div key={s.id} className="flex items-center gap-3 px-4 py-3">
-              <Monitor className="text-muted-foreground h-5 w-5 shrink-0" />
-              <div className="min-w-0 flex-1 text-sm">
-                <p className="flex items-center gap-2 truncate font-medium">
-                  {describeUserAgent(s.userAgent)}
-                  {s.current ? <Badge variant="success">This device</Badge> : null}
-                </p>
-                <p className="text-muted-foreground truncate text-xs">
-                  {s.ip ? `${s.ip} · ` : ''}Last active {formatRelative(s.lastSeenAt)} · Signed in{' '}
-                  {formatFullDate(s.createdAt)}
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => revoke.mutate(s.id)}
-                loading={revoke.isPending && revoke.variables === s.id}
-              >
-                <LogOut /> {s.current ? 'Sign out' : 'Revoke'}
-              </Button>
-            </div>
-          ))
+          <ul className="divide-line border-line divide-y border-y">
+            {sessions.data.sessions.map((s) => {
+              const mobile = /iPhone|iPad|Android/i.test(s.userAgent || '');
+              const Icon = mobile ? Smartphone : Monitor;
+              return (
+                <li key={s.id} className="flex items-center gap-3 py-2.5">
+                  <Icon className="text-fg-muted size-4 shrink-0" aria-hidden="true" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-ui text-fg flex items-center gap-2 truncate">
+                      {describeUserAgent(s.userAgent)}
+                      {s.current ? <Badge variant="success">This device</Badge> : null}
+                    </p>
+                    <p className="text-caption text-fg-muted truncate">
+                      {s.ip ? `${s.ip} · ` : ''}active {formatRelative(s.lastSeenAt)}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => revoke.mutate(s.id)}
+                    loading={revoke.isPending && revoke.variables === s.id}
+                  >
+                    <LogOut /> {s.current ? 'Sign out' : 'Revoke'}
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
         )}
-        <div className="px-4 py-3">
-          <Button
-            variant="destructive"
-            onClick={() => revokeAll.mutate()}
-            loading={revokeAll.isPending}
-          >
+        <div>
+          <Button variant="danger" onClick={() => revokeAll.mutate()} loading={revokeAll.isPending}>
             Sign out of all sessions
           </Button>
         </div>
       </SettingsSection>
 
-      <SettingsSection title="Recent sign-ins">
-        {lastLogin ? (
-          <p className="px-4 py-3 text-sm">
-            Last successful sign-in {formatFullDate(lastLogin.at)}
-            {lastLogin.ip ? ` from ${lastLogin.ip}` : ''}.
-          </p>
-        ) : null}
-        {(sessions.data?.loginHistory || []).map((h, i) => (
-          <div key={i} className="flex items-center gap-3 px-4 py-2 text-sm">
-            {h.success ? (
-              <ShieldCheck className="text-success h-4 w-4" />
-            ) : (
-              <ShieldX className="text-destructive h-4 w-4" />
-            )}
-            <span className="flex-1 truncate">
-              {h.success ? 'Successful sign-in' : 'Failed sign-in attempt'} ·{' '}
-              {describeUserAgent(h.userAgent)}
-            </span>
-            <span className="text-muted-foreground text-xs">{formatFullDate(h.at)}</span>
-          </div>
-        ))}
+      <SettingsSection
+        title="Recent sign-ins"
+        description={
+          lastLogin
+            ? `Last successful sign-in ${formatFullDate(lastLogin.at)}${lastLogin.ip ? ` from ${lastLogin.ip}` : ''}.`
+            : undefined
+        }
+      >
+        <ul className="divide-line border-line divide-y border-y">
+          {(sessions.data?.loginHistory || []).map((h, i) => (
+            <li key={i} className="text-ui flex items-center gap-3 py-2">
+              {h.success ? (
+                <Check className="text-success size-4 shrink-0" aria-hidden="true" />
+              ) : (
+                <X className="text-danger size-4 shrink-0" aria-hidden="true" />
+              )}
+              <span className="text-fg-secondary min-w-0 flex-1 truncate">
+                {h.success ? 'Signed in' : 'Failed attempt'} · {describeUserAgent(h.userAgent)}
+                {h.ip ? ` · ${h.ip}` : ''}
+              </span>
+              <time className="text-caption text-fg-muted shrink-0">{formatFullDate(h.at)}</time>
+            </li>
+          ))}
+        </ul>
       </SettingsSection>
 
       <SettingsSection title="Password">
-        <p className="text-muted-foreground px-4 py-3 text-sm">
-          Your password is managed by the mail server. Change it in the Mailcow user portal; all
-          webmail sessions will then need to sign in again.
+        <p className="text-body text-fg-secondary max-w-prose">
+          Your password belongs to the mail server, not to this application. Change it in your mail
+          server&apos;s own control panel; every webmail session will then need to sign in again.
         </p>
       </SettingsSection>
     </>

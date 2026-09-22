@@ -1,23 +1,23 @@
 import { cn } from '@/utils/cn';
 
-export function EmptyState({ icon: Icon, title, description, action, className }) {
+/**
+ * Empty states are quiet by design: a short statement of fact, an optional
+ * explanation, and at most one action. No illustration, no framed icon tile —
+ * an empty inbox is good news, not an event.
+ */
+export function EmptyState({ title, description, action, className }) {
   return (
     <div
       className={cn(
-        'animate-fade-in flex h-full min-h-[280px] flex-col items-center justify-center px-6 py-12 text-center',
+        'flex min-h-52 flex-1 flex-col items-center justify-center px-6 py-14 text-center',
         className
       )}
     >
-      {Icon ? (
-        <div className="bg-muted text-muted-foreground mb-4 flex h-14 w-14 items-center justify-center rounded-2xl">
-          <Icon className="h-7 w-7" aria-hidden="true" />
-        </div>
-      ) : null}
-      <h3 className="text-base font-semibold">{title}</h3>
+      <p className="text-title text-fg font-semibold">{title}</p>
       {description ? (
-        <p className="text-muted-foreground mt-1 max-w-sm text-sm">{description}</p>
+        <p className="measure text-body text-fg-secondary mt-1.5">{description}</p>
       ) : null}
-      {action ? <div className="mt-5">{action}</div> : null}
+      {action ? <div className="mt-4">{action}</div> : null}
     </div>
   );
 }

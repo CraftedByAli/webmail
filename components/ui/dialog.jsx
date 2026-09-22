@@ -14,10 +14,7 @@ export const DialogOverlay = React.forwardRef(function DialogOverlay({ className
   return (
     <DialogPrimitive.Overlay
       ref={ref}
-      className={cn(
-        'animate-fade-in fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px]',
-        className
-      )}
+      className={cn('fixed inset-0 z-50 bg-black/45', className)}
       {...props}
     />
   );
@@ -33,16 +30,18 @@ export const DialogContent = React.forwardRef(function DialogContent(
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
-          'border-border bg-popover text-popover-foreground shadow-float animate-slide-up fixed top-1/2 left-1/2 z-50 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl border p-6',
+          'overlay-in border-line bg-surface text-fg shadow-overlay rounded-surface fixed top-1/2 left-1/2 z-50 grid w-[calc(100%-1.5rem)] max-w-md -translate-x-1/2 -translate-y-1/2 gap-4 border p-5',
           className
         )}
         {...props}
       >
         {children}
         {!hideClose ? (
-          <DialogPrimitive.Close className="text-muted-foreground focus:ring-ring absolute top-4 right-4 rounded-md p-1 opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:outline-none">
-            <X className="h-4 w-4" />
-            <span className="sr-only">Close</span>
+          <DialogPrimitive.Close
+            aria-label="Close"
+            className="text-fg-muted hover:bg-hover hover:text-fg focus-visible:outline-focus rounded-control absolute top-3 right-3 grid size-7 place-items-center transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+          >
+            <X className="size-4" />
           </DialogPrimitive.Close>
         ) : null}
       </DialogPrimitive.Content>
@@ -51,8 +50,9 @@ export const DialogContent = React.forwardRef(function DialogContent(
 });
 
 export function DialogHeader({ className, ...props }) {
-  return <div className={cn('flex flex-col space-y-1.5 text-left', className)} {...props} />;
+  return <div className={cn('grid gap-1 pr-8 text-left', className)} {...props} />;
 }
+
 export function DialogFooter({ className, ...props }) {
   return (
     <div
@@ -61,15 +61,17 @@ export function DialogFooter({ className, ...props }) {
     />
   );
 }
+
 export const DialogTitle = React.forwardRef(function DialogTitle({ className, ...props }, ref) {
   return (
     <DialogPrimitive.Title
       ref={ref}
-      className={cn('text-lg leading-none font-semibold tracking-tight', className)}
+      className={cn('text-title font-semibold', className)}
       {...props}
     />
   );
 });
+
 export const DialogDescription = React.forwardRef(function DialogDescription(
   { className, ...props },
   ref
@@ -77,7 +79,7 @@ export const DialogDescription = React.forwardRef(function DialogDescription(
   return (
     <DialogPrimitive.Description
       ref={ref}
-      className={cn('text-muted-foreground text-sm', className)}
+      className={cn('text-body text-fg-secondary', className)}
       {...props}
     />
   );

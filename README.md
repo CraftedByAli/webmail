@@ -53,6 +53,7 @@ Browser ──HTTPS──▶ Next.js (Node) ──IMAPS 993──▶ Dovecot (Ma
 - [Backup considerations](#backup-considerations)
 - [Security](#security)
 - [Architecture](#architecture)
+- [Design](#design)
 
 ## Prerequisites
 
@@ -241,6 +242,12 @@ Set `LOG_LEVEL=debug` for detailed server logs; passwords, tokens and cookies ar
 
 See [docs/SECURITY.md](docs/SECURITY.md) for the full model: credential handling, cookies, CSRF, CSP, email HTML
 sandboxing, attachment handling, rate limiting, logging and what to review before exposing the app publicly.
+
+## Design
+
+See [docs/DESIGN.md](docs/DESIGN.md) for the design system: typography, colour, spacing, radius, elevation,
+component philosophy, the message-rendering pipeline (including how dark mode handles sender-styled email),
+density, responsive behaviour and accessibility.
 
 ## Architecture
 

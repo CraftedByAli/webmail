@@ -9,8 +9,8 @@ import { cn } from '@/utils/cn';
 const MAX_MB = Number(process.env.NEXT_PUBLIC_MAX_ATTACHMENT_SIZE_MB || 50);
 
 /**
- * Upload state for a compose window. Uploads stream to /api/attachments/upload
- * via XHR so we can show progress; the returned id is referenced when sending.
+ * Upload state for one compose window. Files stream to the server over XHR so
+ * progress is real rather than a spinner that guesses.
  */
 export function useAttachmentUploads(windowId) {
   const [uploads, setUploads] = useState([]);
@@ -20,7 +20,7 @@ export function useAttachmentUploads(windowId) {
     (files) => {
       for (const file of files) {
         if (file.size > MAX_MB * 1024 * 1024) {
-          toast.error(`${file.name} is larger than ${MAX_MB} MB.`);
+          toast.error(`${file.name} is larger than the ${MAX_MB} MB limit.`);
           continue;
         }
         const id = `${windowId}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -44,12 +44,13 @@ export function useAttachmentUploads(windowId) {
         xhr.open('POST', '/api/attachments/upload');
         xhr.setRequestHeader('X-Requested-With', 'webmail');
         xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable)
+          if (e.lengthComputable) {
             setUploads((list) =>
               list.map((u) =>
                 u.id === id ? { ...u, progress: Math.round((e.loaded / e.total) * 100) } : u
               )
             );
+          }
         };
         xhr.onload = () => {
           xhrs.current.delete(id);
@@ -73,7 +74,7 @@ export function useAttachmentUploads(windowId) {
             try {
               message = JSON.parse(xhr.responseText).error?.message || message;
             } catch {
-              // ignore
+              // Keep the generic message.
             }
             setUploads((list) => list.map((u) => (u.id === id ? { ...u, error: message } : u)));
             toast.error(`${file.name}: ${message}`);
@@ -111,54 +112,51 @@ export function useAttachmentUploads(windowId) {
   return { uploads, addFiles, removeUpload, uploading };
 }
 
-/** Renders the attachment chips inside the compose window. */
+/** Attached files, listed with live progress. */
 export function AttachmentPicker({ attachments, onRemove }) {
   return (
-    <ul
-      className="border-border/60 mt-3 flex flex-wrap gap-2 border-t pt-3"
-      aria-label="Attachments"
-    >
-      {attachments.map((a) => (
-        <li
-          key={a.id}
-          className={cn(
-            'border-border bg-surface-raised relative flex max-w-xs items-center gap-2 overflow-hidden rounded-xl border px-3 py-1.5 text-xs',
-            a.error && 'border-destructive/50'
-          )}
-        >
-          {a.error ? (
-            <AlertCircle className="text-destructive h-4 w-4 shrink-0" />
-          ) : (
-            <Paperclip className="text-muted-foreground h-4 w-4 shrink-0" />
-          )}
-          <div className="min-w-0">
-            <p className="truncate font-medium" title={a.filename}>
-              {a.filename}
-            </p>
-            <p className="text-muted-foreground">
-              {a.error
-                ? a.error
-                : a.progress !== undefined && a.progress < 100 && !a.uploadId
-                  ? `Uploading ${a.progress}%`
-                  : formatBytes(a.size)}
-            </p>
-          </div>
-          <button
-            type="button"
-            aria-label={`Remove ${a.filename}`}
-            className="hover:bg-muted ml-1 rounded-full p-0.5"
-            onClick={() => onRemove(a)}
+    <ul className="border-line mt-4 grid gap-1 border-t pt-3" aria-label="Attached files">
+      {attachments.map((a) => {
+        const pending = a.progress !== undefined && a.progress < 100 && !a.uploadId && !a.error;
+        return (
+          <li
+            key={a.id}
+            className={cn(
+              'rounded-control relative flex items-center gap-2 overflow-hidden px-2 py-1.5',
+              a.error ? 'bg-danger-subtle' : 'bg-sunken'
+            )}
           >
-            <X className="h-3.5 w-3.5" />
-          </button>
-          {a.progress !== undefined && a.progress < 100 && !a.uploadId && !a.error ? (
-            <span
-              className="bg-primary absolute inset-x-0 bottom-0 h-0.5 transition-all"
-              style={{ width: `${a.progress}%` }}
-            />
-          ) : null}
-        </li>
-      ))}
+            {a.error ? (
+              <AlertCircle className="text-danger size-4 shrink-0" aria-hidden="true" />
+            ) : (
+              <Paperclip className="text-fg-muted size-4 shrink-0" aria-hidden="true" />
+            )}
+            <span className="min-w-0 flex-1">
+              <span className="text-ui text-fg block truncate" title={a.filename}>
+                {a.filename}
+              </span>
+              <span className={cn('text-meta block', a.error ? 'text-danger' : 'text-fg-muted')}>
+                {a.error ? a.error : pending ? `Uploading ${a.progress}%` : formatBytes(a.size)}
+              </span>
+            </span>
+            <button
+              type="button"
+              aria-label={`Remove ${a.filename}`}
+              className="text-fg-muted hover:bg-active hover:text-fg focus-visible:outline-focus rounded-control grid size-6 shrink-0 place-items-center transition-colors focus-visible:outline-2 focus-visible:outline-offset-1"
+              onClick={() => onRemove(a)}
+            >
+              <X className="size-3.5" />
+            </button>
+            {pending ? (
+              <span
+                className="bg-accent absolute inset-x-0 bottom-0 h-0.5 transition-[width] duration-200"
+                style={{ width: `${a.progress}%` }}
+                aria-hidden="true"
+              />
+            ) : null}
+          </li>
+        );
+      })}
     </ul>
   );
 }

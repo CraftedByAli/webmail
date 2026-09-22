@@ -3,27 +3,32 @@
 import { Reply, ReplyAll, Forward } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-/** Reply / Reply all / Forward buttons at the bottom of a conversation. */
+/**
+ * Reply actions closing the conversation. Exactly one is primary — the one the
+ * user's own default-reply preference says they mean.
+ */
 export function QuickReply({ message, me, defaultReplyAll, onReply, onReplyAll, onForward }) {
   const others = [...(message.to || []), ...(message.cc || [])].filter((a) => a.address !== me);
   const canReplyAll =
     others.length > 0 ||
     (message.from && message.from.address !== me && (message.to || []).length > 1);
+  const replyAllIsPrimary = defaultReplyAll && canReplyAll;
+
   return (
-    <div className="mt-4 flex flex-wrap gap-2 print:hidden">
+    <div className="mt-5 flex flex-wrap gap-2 print:hidden">
       <Button
-        variant={defaultReplyAll && canReplyAll ? 'outline' : 'default'}
+        variant={replyAllIsPrimary ? 'default' : 'primary'}
         onClick={onReply}
         data-testid="reply-button"
       >
         <Reply /> Reply
       </Button>
       {canReplyAll ? (
-        <Button variant={defaultReplyAll ? 'default' : 'outline'} onClick={onReplyAll}>
+        <Button variant={replyAllIsPrimary ? 'primary' : 'default'} onClick={onReplyAll}>
           <ReplyAll /> Reply all
         </Button>
       ) : null}
-      <Button variant="outline" onClick={onForward}>
+      <Button variant="default" onClick={onForward}>
         <Forward /> Forward
       </Button>
     </div>

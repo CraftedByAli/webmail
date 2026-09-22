@@ -4,7 +4,7 @@ export function Kbd({ className, children }) {
   return (
     <kbd
       className={cn(
-        'border-border bg-muted text-muted-foreground inline-flex h-5 min-w-5 items-center justify-center rounded border px-1.5 font-mono text-[11px] font-medium',
+        'border-line-strong bg-sunken text-meta text-fg-muted rounded-tight inline-flex h-4 min-w-4 items-center justify-center border px-1 font-sans font-medium',
         className
       )}
     >

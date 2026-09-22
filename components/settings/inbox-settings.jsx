@@ -18,8 +18,12 @@ export function InboxSettings({ session }) {
   const set = (patch) => update.mutate({ inbox: patch });
 
   return (
-    <SettingsSection title="Inbox" description="How conversations are listed.">
-      <SettingRow label="Page size" description="Conversations loaded per page." htmlFor="pageSize">
+    <SettingsSection title="Reading" description="How messages are listed and displayed.">
+      <SettingRow
+        label="Page size"
+        description="How many conversations load at a time."
+        htmlFor="pageSize"
+      >
         <Select value={String(prefs.pageSize)} onValueChange={(v) => set({ pageSize: Number(v) })}>
           <SelectTrigger id="pageSize">
             <SelectValue />
@@ -34,7 +38,7 @@ export function InboxSettings({ session }) {
       <ToggleRow
         id="conversationView"
         label="Conversation view"
-        description="Group replies into a single conversation."
+        description="Group replies with the message they answer."
         checked={prefs.conversationView}
         onChange={(v) => set({ conversationView: v })}
       />
@@ -48,13 +52,13 @@ export function InboxSettings({ session }) {
       <ToggleRow
         id="autoLoadImages"
         label="Always load remote images"
-        description="Not recommended: remote images can be used to track when you open mail."
+        description="Remote images can report when and where you opened a message, so they are blocked until you ask for them."
         checked={prefs.autoLoadImages}
         onChange={(v) => set({ autoLoadImages: v })}
       />
       <SettingRow
         label="Default folder"
-        description="Folder opened after sign-in."
+        description="Opened when you sign in."
         htmlFor="defaultFolder"
       >
         <Select value={prefs.defaultFolder} onValueChange={(v) => set({ defaultFolder: v })}>

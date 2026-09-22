@@ -33,11 +33,14 @@ export function NotificationSettings({ session }) {
   }
 
   return (
-    <SettingsSection title="Notifications" description="How you are told about new mail.">
+    <SettingsSection
+      title="Notifications"
+      description="How you find out that new mail has arrived."
+    >
       <ToggleRow
         id="newMail"
         label="In-app alerts"
-        description="Show a toast when new mail arrives."
+        description="A brief message in the corner of the app when mail arrives."
         checked={prefs.newMail}
         onChange={(v) => set({ newMail: v })}
       />
@@ -55,7 +58,7 @@ export function NotificationSettings({ session }) {
       <ToggleRow
         id="sound"
         label="Sound"
-        description="Play a short chime with desktop notifications."
+        description="Play a short chime alongside desktop notifications."
         checked={prefs.sound}
         onChange={(v) => set({ sound: v })}
       />

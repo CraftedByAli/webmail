@@ -1,23 +1,33 @@
 'use client';
 
-import * as React from 'react';
 import { cn } from '@/utils/cn';
-import { avatarColor, initialsOf } from '@/utils/format';
+import { initialsOf } from '@/utils/format';
 
-/** Initials avatar coloured deterministically by address. */
+/**
+ * Neutral initials avatar.
+ *
+ * Deliberately monochrome: a per-sender colour hash turns a mail list into a
+ * confetti of meaningless colour and competes with the accent, which in this
+ * product means "unread / current / focus". Identity is carried by the name.
+ */
+const sizes = {
+  xs: 'size-5 text-[9px]',
+  sm: 'size-6 text-meta',
+  md: 'size-7 text-meta',
+  lg: 'size-9 text-caption',
+};
+
 export function Avatar({ address, className, size = 'md' }) {
   const label = address?.name || address?.address || '';
-  const sizes = { sm: 'h-7 w-7 text-[11px]', md: 'h-9 w-9 text-xs', lg: 'h-11 w-11 text-sm' };
   return (
     <span
       role="img"
-      aria-label={label}
+      aria-label={label || 'Unknown sender'}
       className={cn(
-        'inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white select-none',
+        'rounded-pill bg-hover text-fg-secondary ring-line inline-grid shrink-0 place-items-center font-semibold uppercase ring-1 select-none ring-inset',
         sizes[size],
         className
       )}
-      style={{ backgroundColor: avatarColor(address?.address) }}
     >
       {initialsOf(address)}
     </span>

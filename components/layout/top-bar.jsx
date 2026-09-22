@@ -4,17 +4,16 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import {
-  Menu,
+  PanelLeft,
   Settings,
   LogOut,
   Moon,
   Sun,
   Monitor,
-  Wifi,
-  WifiOff,
   Activity,
   Users,
-  HelpCircle,
+  Keyboard,
+  WifiOff,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Logo } from '@/components/layout/logo';
@@ -31,10 +30,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { apiPost } from '@/utils/api-client';
 import { useUiStore } from '@/stores/ui-store';
 import { useUpdatePreferences } from '@/hooks/use-session';
 
+/**
+ * The brand block is exactly one sidebar wide, so search begins on the same
+ * vertical axis as the message list below it.
+ */
 export function TopBar({ user, isAdmin }) {
   const router = useRouter();
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
@@ -46,7 +50,7 @@ export function TopBar({ user, isAdmin }) {
     try {
       await apiPost('/api/auth/logout');
     } catch {
-      // Cookie cleared regardless
+      // The cookie is cleared regardless; always land on the login screen.
     }
     router.replace('/login');
     router.refresh();
@@ -57,70 +61,81 @@ export function TopBar({ user, isAdmin }) {
     updatePrefs.mutate({ appearance: { theme: value } });
   }
 
-  const statusLabel =
-    {
-      live: 'Real-time updates active',
-      polling: 'Checking for mail periodically',
-      connecting: 'Connecting…',
-      offline: 'Offline',
-    }[realtimeStatus] || '';
-
   return (
-    <header className="border-border bg-surface flex h-14 shrink-0 items-center gap-2 border-b px-2 sm:px-4">
-      <IconButton label="Open menu" className="md:hidden" onClick={toggleSidebar}>
-        <Menu />
+    <header
+      data-chrome
+      className="border-line bg-canvas flex h-12 shrink-0 items-center gap-2 border-b pr-2 pl-2 sm:pr-3"
+    >
+      <IconButton
+        label="Show folders"
+        className="md:hidden"
+        onClick={toggleSidebar}
+        tooltip={false}
+      >
+        <PanelLeft />
       </IconButton>
+
       <Link
         href="/mail/inbox"
-        className="flex items-center gap-2 rounded-lg px-1 py-1 font-semibold tracking-tight md:min-w-[12rem]"
-        aria-label="Webmail home"
+        aria-label="Webmail — go to Inbox"
+        className="focus-visible:outline-focus rounded-control flex h-8 shrink-0 items-center px-1.5 focus-visible:outline-2 focus-visible:outline-offset-2 md:w-[calc(var(--rail-w)-0.5rem)]"
       >
-        <Logo className="h-8 w-8" />
-        <span className="hidden sm:inline">Webmail</span>
+        <Logo showText />
       </Link>
 
-      <div className="flex min-w-0 flex-1 justify-center px-1 sm:px-4">
+      <div className="md:pl-gutter flex min-w-0 flex-1 items-center">
         <SearchBar />
       </div>
 
-      <div className="flex items-center gap-1">
-        <span
-          className="text-muted-foreground hidden items-center sm:flex"
-          title={statusLabel}
-          aria-label={statusLabel}
-          role="status"
-        >
-          {realtimeStatus === 'live' ? (
-            <Wifi className="text-success h-4 w-4" />
-          ) : realtimeStatus === 'offline' ? (
-            <WifiOff className="h-4 w-4" />
-          ) : (
-            <Activity className="h-4 w-4 opacity-60" />
-          )}
-        </span>
+      <div className="flex shrink-0 items-center gap-0.5">
+        {/* Connection state is surfaced only when it needs attention. */}
+        {realtimeStatus === 'polling' || realtimeStatus === 'offline' ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                role="status"
+                className="text-fg-muted grid size-8 place-items-center"
+                aria-label={
+                  realtimeStatus === 'offline'
+                    ? 'Offline — reconnecting'
+                    : 'Live updates unavailable, checking for mail periodically'
+                }
+              >
+                <WifiOff className="size-4" />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {realtimeStatus === 'offline'
+                ? 'Offline — reconnecting'
+                : 'Checking for mail periodically'}
+            </TooltipContent>
+          </Tooltip>
+        ) : null}
+
         <IconButton
           label="Keyboard shortcuts"
           shortcut="?"
           className="hidden sm:inline-flex"
           onClick={() => useUiStore.setState({ helpOpen: true })}
         >
-          <HelpCircle />
+          <Keyboard />
         </IconButton>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="focus-visible:ring-ring ml-1 rounded-full focus-visible:ring-2 focus-visible:outline-none"
-              aria-label="Account menu"
+              className="hover:bg-hover focus-visible:outline-focus rounded-control ml-0.5 grid size-8 place-items-center transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+              aria-label={`Account menu for ${user.email}`}
             >
-              <Avatar address={{ address: user.email }} size="md" />
+              <Avatar address={{ address: user.email }} size="sm" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-64">
-            <DropdownMenuLabel className="truncate text-sm font-normal">
-              <span className="text-muted-foreground block text-xs">Signed in as</span>
-              <span className="text-foreground block truncate font-medium">{user.email}</span>
-            </DropdownMenuLabel>
+          <DropdownMenuContent align="end" className="w-60">
+            <div className="px-2 py-1.5">
+              <p className="text-meta text-fg-muted">Signed in as</p>
+              <p className="text-ui text-fg truncate font-medium">{user.email}</p>
+            </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link href="/settings">
@@ -140,16 +155,16 @@ export function TopBar({ user, isAdmin }) {
               </DropdownMenuItem>
             ) : null}
             <DropdownMenuSeparator />
-            <DropdownMenuLabel>Theme</DropdownMenuLabel>
+            <DropdownMenuLabel>Appearance</DropdownMenuLabel>
             <DropdownMenuRadioGroup value={theme} onValueChange={changeTheme}>
               <DropdownMenuRadioItem value="light">
-                <Sun className="mr-2 h-4 w-4" /> Light
+                <Sun /> Light
               </DropdownMenuRadioItem>
               <DropdownMenuRadioItem value="dark">
-                <Moon className="mr-2 h-4 w-4" /> Dark
+                <Moon /> Dark
               </DropdownMenuRadioItem>
               <DropdownMenuRadioItem value="system">
-                <Monitor className="mr-2 h-4 w-4" /> System
+                <Monitor /> System
               </DropdownMenuRadioItem>
             </DropdownMenuRadioGroup>
             <DropdownMenuSeparator />

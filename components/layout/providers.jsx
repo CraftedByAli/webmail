@@ -39,7 +39,7 @@ export function Providers({ children, nonce }) {
             position="bottom-left"
             richColors
             closeButton
-            toastOptions={{ className: 'rounded-xl' }}
+            toastOptions={{ className: 'rounded-surface' }}
           />
         </TooltipProvider>
       </QueryClientProvider>

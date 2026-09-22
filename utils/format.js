@@ -82,8 +82,13 @@ export function formatBytes(bytes) {
   return `${n >= 10 || i === 0 ? Math.round(n) : n.toFixed(1)} ${units[i]}`;
 }
 
-/** Short participant label for list rows (first names, "me"). */
-export function participantsLabel(participants, me, count) {
+/**
+ * Short participant label for list rows (first names, "me").
+ *
+ * The message count is rendered separately by the row so it can carry its own
+ * typographic weight; it is deliberately not baked into this string.
+ */
+export function participantsLabel(participants, me) {
   if (!participants || participants.length === 0) return me ? 'me' : '';
   const names = participants.map((p) => {
     if (me && p.address === me) return 'me';
@@ -91,11 +96,9 @@ export function participantsLabel(participants, me, count) {
     return name.split(/\s+/)[0];
   });
   const unique = [...new Set(names)];
-  const label =
-    unique.length > 3
-      ? `${unique.slice(0, 2).join(', ')} … ${unique[unique.length - 1]}`
-      : unique.join(', ');
-  return count > 1 ? `${label} (${count})` : label;
+  return unique.length > 3
+    ? `${unique.slice(0, 2).join(', ')} … ${unique[unique.length - 1]}`
+    : unique.join(', ');
 }
 
 /** Deterministic avatar hue from an email address. */

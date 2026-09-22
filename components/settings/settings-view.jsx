@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { IconButton } from '@/components/ui/icon-button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/utils/cn';
 import { GeneralSettings } from '@/components/settings/general-settings';
 import { AppearanceSettings } from '@/components/settings/appearance-settings';
@@ -13,12 +14,11 @@ import { ShortcutSettings } from '@/components/settings/shortcut-settings';
 import { SecuritySettings } from '@/components/settings/security-settings';
 import { AboutSettings } from '@/components/settings/about-settings';
 import { useSession } from '@/hooks/use-session';
-import { Skeleton } from '@/components/ui/skeleton';
 
 const SECTIONS = [
   ['general', 'General', GeneralSettings],
   ['appearance', 'Appearance', AppearanceSettings],
-  ['inbox', 'Inbox', InboxSettings],
+  ['inbox', 'Reading', InboxSettings],
   ['notifications', 'Notifications', NotificationSettings],
   ['signatures', 'Signatures', SignatureSettings],
   ['shortcuts', 'Keyboard shortcuts', ShortcutSettings],
@@ -31,48 +31,58 @@ export function SettingsView() {
   const params = useSearchParams();
   const current = params.get('section') || 'general';
   const { data: session, isPending } = useSession();
-  const Section = (SECTIONS.find(([k]) => k === current) || SECTIONS[0])[2];
+  const entry = SECTIONS.find(([k]) => k === current) || SECTIONS[0];
+  const Section = entry[2];
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="border-border flex h-12 shrink-0 items-center gap-2 border-b px-2 sm:px-3">
+    <div className="bg-surface flex h-full min-h-0 flex-col">
+      <div
+        data-chrome
+        className="border-line bg-canvas px-gutter flex h-11 shrink-0 items-center gap-1 border-b"
+      >
         <IconButton label="Back to mail" onClick={() => router.push('/mail/inbox')}>
           <ArrowLeft />
         </IconButton>
-        <h1 className="text-base font-semibold">Settings</h1>
+        <h1 className="text-title text-fg font-semibold">Settings</h1>
       </div>
+
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <nav
           aria-label="Settings sections"
-          className="border-border shrink-0 scrollbar-thin overflow-x-auto border-b md:w-56 md:overflow-y-auto md:border-r md:border-b-0"
+          className="border-line shrink-0 scrollbar-thin overflow-x-auto border-b md:w-56 md:overflow-y-auto md:border-r md:border-b-0"
         >
-          <ul className="flex md:flex-col md:p-2">
-            {SECTIONS.map(([key, label]) => (
-              <li key={key}>
-                <button
-                  type="button"
-                  onClick={() => router.replace(`/settings?section=${key}`)}
-                  aria-current={current === key ? 'page' : undefined}
-                  className={cn(
-                    'px-4 py-2.5 text-sm whitespace-nowrap md:w-full md:rounded-lg md:text-left',
-                    current === key
-                      ? 'border-primary text-foreground md:bg-accent md:text-accent-foreground border-b-2 font-medium md:border-b-0'
-                      : 'text-muted-foreground hover:text-foreground'
-                  )}
-                >
-                  {label}
-                </button>
-              </li>
-            ))}
+          <ul className="flex md:flex-col md:gap-px md:p-2.5">
+            {SECTIONS.map(([key, label]) => {
+              const active = current === key;
+              return (
+                <li key={key}>
+                  <button
+                    type="button"
+                    onClick={() => router.replace(`/settings?section=${key}`)}
+                    aria-current={active ? 'page' : undefined}
+                    className={cn(
+                      'text-ui md:rounded-control px-4 py-2.5 whitespace-nowrap transition-colors duration-100 md:h-7 md:w-full md:px-2 md:py-0 md:text-left',
+                      active
+                        ? 'border-accent text-fg md:bg-accent-subtle md:text-accent-text border-b-2 font-medium md:border-b-0'
+                        : 'text-fg-secondary hover:text-fg md:hover:bg-hover'
+                    )}
+                  >
+                    {label}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </nav>
+
         <div className="min-h-0 flex-1 scrollbar-thin overflow-y-auto">
-          <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6">
+          <div className="px-gutter mx-auto max-w-2xl py-7">
             {isPending || !session ? (
-              <div className="space-y-4">
-                <Skeleton className="h-8 w-48" />
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-24 w-full" />
+              <div className="grid gap-4">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-3 w-72" />
+                <Skeleton className="mt-4 h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
               </div>
             ) : (
               <Section session={session} />

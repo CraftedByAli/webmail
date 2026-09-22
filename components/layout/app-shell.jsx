@@ -24,15 +24,13 @@ export function AppShell({ user, children }) {
   const openCompose = useComposeStore((s) => s.open);
   const sidebarOpen = useUiStore((s) => s.sidebarOpen);
   const setSidebarOpen = useUiStore((s) => s.setSidebarOpen);
+  const helpOpen = useUiStore((s) => s.helpOpen || false);
   const { setTheme } = useTheme();
-  const [helpOpen, setHelpOpen] = useHelpDialog();
 
-  // Sync theme preference from the server.
   useEffect(() => {
     if (preferences?.appearance?.theme) setTheme(preferences.appearance.theme);
   }, [preferences?.appearance?.theme, setTheme]);
 
-  // Close the mobile drawer on navigation.
   useEffect(() => {
     setSidebarOpen(false);
   }, [pathname, setSidebarOpen]);
@@ -48,55 +46,66 @@ export function AppShell({ user, children }) {
       goSent: () => router.push('/mail/sent'),
       goDrafts: () => router.push('/mail/drafts'),
       search: () => document.getElementById('global-search')?.focus(),
-      help: () => setHelpOpen(true),
+      help: () => useUiStore.setState({ helpOpen: true }),
     }),
-    [openCompose, router, setHelpOpen]
+    [openCompose, router]
   );
   useKeyboardShortcuts(globalShortcuts, { enabled: shortcutsEnabled });
 
-  const density = preferences?.appearance?.density === 'compact' ? 'density-compact' : '';
-
   return (
-    <div className={cn('bg-background flex h-dvh flex-col overflow-hidden', density)}>
+    <div
+      className={cn(
+        'bg-canvas flex h-dvh flex-col overflow-hidden',
+        preferences?.appearance?.density === 'compact' && 'density-compact'
+      )}
+    >
+      <a
+        href="#main"
+        className="focus:bg-accent focus:text-ui focus:text-on-accent focus:rounded-control sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-[60] focus:px-3 focus:py-2"
+      >
+        Skip to content
+      </a>
+
       <TopBar user={user} isAdmin={session?.user?.isAdmin ?? user.isAdmin} />
+
       <div className="flex min-h-0 flex-1">
         {isMobile ? (
           <>
             {sidebarOpen ? (
               <button
                 type="button"
-                aria-label="Close menu"
-                className="animate-fade-in fixed inset-0 z-[45] bg-black/40"
+                aria-label="Close folder menu"
+                className="fixed inset-0 z-[45] bg-black/40"
                 onClick={() => setSidebarOpen(false)}
               />
             ) : null}
             <aside
               className={cn(
-                'bg-sidebar shadow-float fixed inset-y-0 left-0 z-[46] w-72 max-w-[85vw] transform transition-transform duration-200',
+                'border-line bg-canvas fixed inset-y-0 left-0 z-[46] w-[17rem] max-w-[85vw] transform border-r transition-transform duration-200 ease-out',
                 sidebarOpen ? 'translate-x-0' : '-translate-x-full'
               )}
               aria-hidden={!sidebarOpen}
+              inert={!sidebarOpen || undefined}
             >
               <Sidebar mobile />
             </aside>
           </>
         ) : (
-          <aside className="border-border bg-sidebar hidden w-60 shrink-0 border-r md:block lg:w-64">
+          <aside className="border-line hidden w-[var(--rail-w)] shrink-0 border-r md:block">
             <Sidebar />
           </aside>
         )}
-        <main id="main" className="bg-background relative flex min-w-0 flex-1 flex-col">
+
+        <main id="main" className="bg-surface relative flex min-w-0 flex-1 flex-col">
           {children}
         </main>
       </div>
+
       <ComposeManager />
-      <ShortcutsDialog open={helpOpen} onOpenChange={setHelpOpen} />
+      <ShortcutsDialog
+        open={helpOpen}
+        onOpenChange={(open) => useUiStore.setState({ helpOpen: open })}
+      />
     </div>
   );
-}
-
-function useHelpDialog() {
-  const helpOpen = useUiStore((s) => s.helpOpen || false);
-  const set = (open) => useUiStore.setState({ helpOpen: open });
-  return [helpOpen, set];
 }

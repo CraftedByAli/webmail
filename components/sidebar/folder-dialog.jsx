@@ -12,28 +12,30 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Field } from '@/components/ui/field';
 import { useFolderMutations } from '@/hooks/use-folders';
 
-/** Create / rename / delete folder dialogs. */
+/** Create, rename and delete folders. Deletion is destructive and says so. */
 export function FolderDialog({ state, onClose }) {
   const { create, rename, remove } = useFolderMutations();
   const [name, setName] = useState('');
   const [lastState, setLastState] = useState(state);
+  const [error, setError] = useState('');
   const open = !!state;
 
-  // Reset the input whenever a different dialog is opened.
   if (state !== lastState) {
     setLastState(state);
     setName(state?.mode === 'rename' ? state.folder.name : '');
+    setError('');
   }
 
   async function submit(event) {
     event?.preventDefault();
+    setError('');
     try {
       if (state.mode === 'create') {
         await create.mutateAsync({ name, parent: state.parent?.path });
-        toast.success('Folder created');
+        toast.success(`Folder “${name}” created`);
       } else if (state.mode === 'rename') {
         await rename.mutateAsync({ path: state.folder.path, name });
         toast.success('Folder renamed');
@@ -42,8 +44,8 @@ export function FolderDialog({ state, onClose }) {
         toast.success('Folder deleted');
       }
       onClose();
-    } catch (error) {
-      toast.error(error.message);
+    } catch (err) {
+      setError(err.message);
     }
   }
 
@@ -57,15 +59,23 @@ export function FolderDialog({ state, onClose }) {
             <DialogHeader>
               <DialogTitle>Delete “{state.folder.name}”?</DialogTitle>
               <DialogDescription>
-                Messages inside this folder will be permanently deleted from the mail server. This
+                Every message inside this folder is permanently deleted from the mail server. This
                 cannot be undone.
               </DialogDescription>
             </DialogHeader>
+            {error ? (
+              <p
+                role="alert"
+                className="bg-danger-subtle text-ui text-danger rounded-control px-3 py-2"
+              >
+                {error}
+              </p>
+            ) : null}
             <DialogFooter>
               <Button variant="ghost" onClick={onClose}>
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={submit} loading={busy}>
+              <Button variant="danger" onClick={submit} loading={busy}>
                 Delete folder
               </Button>
             </DialogFooter>
@@ -81,11 +91,10 @@ export function FolderDialog({ state, onClose }) {
                     : 'New folder'}
               </DialogTitle>
               <DialogDescription>
-                Folders are stored on the mail server and visible in every mail client.
+                Folders live on the mail server, so they appear in every mail client you use.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-1.5">
-              <Label htmlFor="folder-name">Name</Label>
+            <Field label="Folder name" htmlFor="folder-name" error={error} required>
               <Input
                 id="folder-name"
                 autoFocus
@@ -93,13 +102,14 @@ export function FolderDialog({ state, onClose }) {
                 onChange={(e) => setName(e.target.value)}
                 maxLength={100}
                 required
+                invalid={!!error}
               />
-            </div>
+            </Field>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit" loading={busy} disabled={!name.trim()}>
+              <Button type="submit" variant="primary" loading={busy} disabled={!name.trim()}>
                 {state?.mode === 'rename' ? 'Rename' : 'Create'}
               </Button>
             </DialogFooter>
