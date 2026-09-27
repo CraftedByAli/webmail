@@ -55,8 +55,17 @@ export function proxy(request) {
   const hasSession = !!request.cookies.get(COOKIE)?.value;
   const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
+  // A stale cookie (session expired or revoked elsewhere) sends the layout to
+  // /login?reason=expired. Drop the cookie there instead of bouncing back to
+  // the inbox, which would loop forever.
+  const staleSession =
+    hasSession && pathname === '/login' && request.nextUrl.searchParams.has('reason');
+
   let response;
-  if (!hasSession && !isPublic) {
+  if (staleSession) {
+    response = NextResponse.next({ request: { headers: requestHeaders } });
+    response.cookies.set(COOKIE, '', { path: '/', maxAge: 0 });
+  } else if (!hasSession && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     url.search =

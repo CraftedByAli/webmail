@@ -3,11 +3,18 @@ import './globals.css';
 import { Providers } from '@/components/layout/providers';
 
 export const metadata = {
-  title: { default: 'Webmail', template: '%s · Webmail' },
-  description: 'A modern webmail client for your Mailcow mailbox.',
-  applicationName: 'Webmail',
+  title: { default: 'OsmicMails', template: '%s · OsmicMails' },
+  description: 'OsmicMails — fast, secure business email for every mailbox on your domain.',
+  applicationName: 'OsmicMails',
   manifest: '/manifest.webmanifest',
-  icons: { icon: '/icons/icon.svg' },
+  icons: {
+    icon: [
+      { url: '/icons/icon.svg', type: 'image/svg+xml' },
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180' }],
+  },
+  appleWebApp: { capable: true, title: 'OsmicMails', statusBarStyle: 'default' },
 };
 
 export const viewport = {

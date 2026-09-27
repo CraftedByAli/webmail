@@ -8,7 +8,25 @@ const BASE = 'http://localhost:3000';
 
 export class ApiClient {
   constructor() {
-    this.cookie = null;
+    /** Cookie jar: every cookie the "browser" holds. */
+    this.jar = new Map();
+  }
+
+  /** The session cookie pair (`wm_session=…`) or null when signed out. */
+  get cookie() {
+    return this.jar.has('wm_session') ? `wm_session=${this.jar.get('wm_session')}` : null;
+  }
+
+  set cookie(value) {
+    this.jar.clear();
+    if (value) {
+      const [k, ...v] = value.split('=');
+      this.jar.set(k, v.join('='));
+    }
+  }
+
+  cookieHeader() {
+    return [...this.jar].map(([k, v]) => `${k}=${v}`).join('; ');
   }
 
   async call(
@@ -19,7 +37,7 @@ export class ApiClient {
       method,
       headers: {
         'x-requested-with': 'webmail',
-        ...(this.cookie ? { cookie: this.cookie } : {}),
+        ...(this.jar.size ? { cookie: this.cookieHeader() } : {}),
         ...headers,
       },
     };
@@ -31,10 +49,13 @@ export class ApiClient {
     }
     const request = new Request(`${BASE}${path}`, init);
     const response = await handler(request, { params: Promise.resolve(params) });
-    const setCookie = response.headers.get('set-cookie');
-    if (setCookie) {
-      const [pair] = setCookie.split(';');
-      this.cookie = pair.endsWith('=') ? null : pair;
+    for (const header of response.headers.getSetCookie?.() || []) {
+      const [pair, ...attrs] = header.split(';');
+      const [name, ...rest] = pair.trim().split('=');
+      const value = rest.join('=');
+      const expired = attrs.some((a) => /^\s*max-age=0\s*$/i.test(a));
+      if (!value || expired) this.jar.delete(name);
+      else this.jar.set(name, value);
     }
     const contentType = response.headers.get('content-type') || '';
     const data = contentType.includes('application/json') ? await response.json() : null;

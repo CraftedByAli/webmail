@@ -60,6 +60,26 @@ Additional headers: `Strict-Transport-Security` (production), `X-Content-Type-Op
 - Executable extensions (`.exe .js .vbs .ps1 .jar …`) are refused.
 - Downloads stream from IMAP with `Content-Disposition` (RFC 6266 encoded), `X-Content-Type-Options: nosniff`,
   `Cache-Control: private, no-store` and a restrictive CSP. Only images, PDF, plain text and common media may preview inline.
+- `Content-Length` is only sent when the exact decoded size is known (IMAP reports the transfer-encoded size).
+- Attachment responses allow framing by the app's own origin only (`X-Frame-Options: SAMEORIGIN`,
+  `frame-ancestors 'self'`) for the PDF previewer; every other response keeps `DENY`. Previews render text in a `<pre>`,
+  images (incl. SVG) through `<img>` from a Blob — nothing from an attachment ever executes in the app's origin.
+
+## Multiple mailboxes
+
+- Every mailbox has its own credential row, AES-256-GCM encrypted under a key derived from `SESSION_SECRET` and the
+  session token — adding a mailbox never weakens the others.
+- Each API request names its mailbox (`X-Mailbox` header, or `account=` on plain URLs such as attachments). A request
+  for a mailbox that is not signed in is refused with `401 account_signed_out`; it is never served from another mailbox.
+- The browser keeps one TanStack Query cache per mailbox, so cached mail cannot leak between mailboxes.
+- "Sign out everywhere" and revoking a device apply to the current mailbox only; other mailboxes signed in on that
+  device are untouched. A session emptied of mailboxes is revoked.
+- The `wm_account` cookie is only a UI hint (last-used mailbox) and never authorises anything.
+
+## Forwarding
+
+- Configured with the mailbox's own ManageSieve login over STARTTLS (plaintext authentication is refused).
+- Destinations are validated server-side (syntax, not the mailbox itself, count, optional domain allow-list).
 
 ## Logging
 

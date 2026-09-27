@@ -18,10 +18,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { RichTextEditor } from '@/components/compose/rich-text-editor';
-import { apiDelete, apiPost, apiPut } from '@/utils/api-client';
+import { useApi } from '@/hooks/use-account';
 import { SESSION_KEY } from '@/hooks/use-session';
 
 export function SignatureSettings({ session }) {
+  const api = useApi();
   const signatures = session.signatures || [];
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(null);
@@ -30,7 +31,7 @@ export function SignatureSettings({ session }) {
   const refresh = () => queryClient.invalidateQueries({ queryKey: SESSION_KEY });
   const save = useMutation({
     mutationFn: (input) =>
-      input.id ? apiPut(`/api/signatures/${input.id}`, input) : apiPost('/api/signatures', input),
+      input.id ? api.put(`/api/signatures/${input.id}`, input) : api.post('/api/signatures', input),
     onSuccess: () => {
       refresh();
       setEditing(null);
@@ -39,7 +40,7 @@ export function SignatureSettings({ session }) {
     onError: (e) => toast.error(e.message),
   });
   const remove = useMutation({
-    mutationFn: (id) => apiDelete(`/api/signatures/${id}`),
+    mutationFn: (id) => api.delete(`/api/signatures/${id}`),
     onSuccess: () => {
       refresh();
       toast.success('Signature deleted');

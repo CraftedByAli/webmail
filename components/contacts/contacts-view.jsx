@@ -21,10 +21,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { apiDelete, apiGet, apiPost, apiPut } from '@/utils/api-client';
+import { useApi } from '@/hooks/use-account';
 import { useComposeStore } from '@/stores/compose-store';
 
 export function ContactsView() {
+  const api = useApi();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [q, setQ] = useState('');
@@ -34,11 +35,11 @@ export function ContactsView() {
 
   const contacts = useQuery({
     queryKey: ['contacts', q],
-    queryFn: () => apiGet('/api/contacts', { q }),
+    queryFn: () => api.get('/api/contacts', { q }),
   });
   const save = useMutation({
     mutationFn: (input) =>
-      input.id ? apiPut(`/api/contacts/${input.id}`, input) : apiPost('/api/contacts', input),
+      input.id ? api.put(`/api/contacts/${input.id}`, input) : api.post('/api/contacts', input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
       setEditing(null);
@@ -47,7 +48,7 @@ export function ContactsView() {
     onError: (e) => toast.error(e.message),
   });
   const remove = useMutation({
-    mutationFn: (id) => apiDelete(`/api/contacts/${id}`),
+    mutationFn: (id) => api.delete(`/api/contacts/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
       toast.success('Contact deleted');

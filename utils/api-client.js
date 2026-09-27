@@ -18,11 +18,34 @@ export class ApiError extends Error {
 const GENERIC = 'Something went wrong. Please try again.';
 
 /**
+ * The mailbox requests act on unless a caller names one. Components inside a
+ * mailbox scope use {@link bindApi} (via `useApi()`) so their requests are
+ * pinned to their own mailbox even while the user switches to another.
+ */
+let activeAccount = null;
+let accountSignedOutHandler = null;
+
+export function setActiveAccountForRequests(email) {
+  activeAccount = email || null;
+}
+
+export function getActiveAccountForRequests() {
+  return activeAccount;
+}
+
+/** Called when the server says a mailbox is no longer signed in on this device. */
+export function onAccountSignedOut(handler) {
+  accountSignedOutHandler = handler;
+}
+
+/**
  * @param {string} path
- * @param {RequestInit & { json?: any, query?: Record<string, any> }} [options]
+ * @param {RequestInit & { json?: any, query?: Record<string, any>, account?: string | null }} [options]
+ *   `account`: mailbox to act on; `undefined` = the active mailbox, `null` = none.
  */
 export async function api(path, options = {}) {
-  const { json, query, headers, ...rest } = options;
+  const { json, query, headers, account, ...rest } = options;
+  const mailbox = account === undefined ? activeAccount : account;
   let url = path;
   if (query) {
     const params = new URLSearchParams();
@@ -41,6 +64,7 @@ export async function api(path, options = {}) {
       'X-Requested-With': 'webmail',
       Accept: 'application/json',
       ...(json !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      ...(mailbox ? { 'X-Mailbox': mailbox } : {}),
       ...(headers || {}),
     },
   };
@@ -65,7 +89,9 @@ export async function api(path, options = {}) {
 
   if (!response.ok) {
     const err = data?.error || {};
-    if (
+    if (response.status === 401 && err.code === 'account_signed_out' && accountSignedOutHandler) {
+      accountSignedOutHandler(err.details?.account || mailbox);
+    } else if (
       response.status === 401 &&
       err.code === 'unauthorized' &&
       typeof window !== 'undefined' &&
@@ -77,6 +103,21 @@ export async function api(path, options = {}) {
     throw new ApiError(response.status, err.code || 'error', err.message || GENERIC, err.details);
   }
   return data;
+}
+
+/**
+ * API helpers pinned to one mailbox.
+ * @param {string | null | undefined} account
+ */
+export function bindApi(account) {
+  return {
+    account,
+    get: (path, query) => api(path, { method: 'GET', query, account }),
+    post: (path, json) => api(path, { method: 'POST', json, account }),
+    patch: (path, json) => api(path, { method: 'PATCH', json, account }),
+    put: (path, json) => api(path, { method: 'PUT', json, account }),
+    delete: (path, json) => api(path, { method: 'DELETE', json, account }),
+  };
 }
 
 export const apiGet = (path, query) => api(path, { method: 'GET', query });

@@ -3,7 +3,7 @@
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { apiPost } from '@/utils/api-client';
+import { useApi } from '@/hooks/use-account';
 import { FOLDERS_KEY } from '@/hooks/use-folders';
 import { useUiStore } from '@/stores/ui-store';
 
@@ -120,6 +120,7 @@ function patchCaches(queryClient, { folder, uids, action }) {
  * Bulk mail actions with optimistic UI and rollback.
  */
 export function useMailActions() {
+  const api = useApi();
   const queryClient = useQueryClient();
   const clearSelection = useUiStore((s) => s.clearSelection);
 
@@ -129,7 +130,7 @@ export function useMailActions() {
       const rollback = patchCaches(queryClient, { folder, uids, action });
       clearSelection();
       try {
-        await apiPost('/api/mail/actions', { action, folder, uids, destination });
+        await api.post('/api/mail/actions', { action, folder, uids, destination });
         if (!silent) {
           const label =
             action === 'move' && destination ? `Moved to ${destination}` : LABELS[action];
@@ -151,7 +152,7 @@ export function useMailActions() {
         return false;
       }
     },
-    [queryClient, clearSelection]
+    [api, queryClient, clearSelection]
   );
 
   return {

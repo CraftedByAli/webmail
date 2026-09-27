@@ -1,15 +1,16 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiPatch } from '@/utils/api-client';
+import { useApi } from '@/hooks/use-account';
 
 export const SESSION_KEY = ['session'];
 
 /** Current user, preferences and signatures. */
 export function useSession() {
+  const api = useApi();
   return useQuery({
     queryKey: SESSION_KEY,
-    queryFn: () => apiGet('/api/auth/session'),
+    queryFn: () => api.get('/api/auth/session'),
     staleTime: 5 * 60_000,
   });
 }
@@ -20,9 +21,10 @@ export function usePreferences() {
 }
 
 export function useUpdatePreferences() {
+  const api = useApi();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (patch) => apiPatch('/api/preferences', patch),
+    mutationFn: (patch) => api.patch('/api/preferences', patch),
     onMutate: async (patch) => {
       await queryClient.cancelQueries({ queryKey: SESSION_KEY });
       const previous = queryClient.getQueryData(SESSION_KEY);

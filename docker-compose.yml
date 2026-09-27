@@ -3,7 +3,7 @@
 services:
   webmail:
     build: .
-    image: mailcow-webmail:local
+    image: osmicmails:local
     container_name: webmail
     restart: unless-stopped
     env_file: .env

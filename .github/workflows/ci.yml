@@ -39,6 +39,6 @@ jobs:
         with:
           context: .
           push: false
-          tags: mailcow-webmail:ci
+          tags: osmicmails:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max

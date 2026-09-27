@@ -48,6 +48,10 @@ export function useKeyboardShortcuts(handlers, { enabled = true } = {}) {
         if (key === 's') return fire('goStarred');
         if (key === 't') return fire('goSent');
         if (key === 'd') return fire('goDrafts');
+        if (/^[1-9]$/.test(key) && h.switchMailbox) {
+          event.preventDefault();
+          h.switchMailbox(Number(key));
+        }
         return undefined;
       }
 
@@ -126,6 +130,7 @@ export const SHORTCUT_GROUPS = [
       { keys: ['g', 's'], label: 'Go to Starred', sequence: true },
       { keys: ['g', 't'], label: 'Go to Sent', sequence: true },
       { keys: ['g', 'd'], label: 'Go to Drafts', sequence: true },
+      { keys: ['g', '1–9'], label: 'Switch to mailbox 1–9', sequence: true },
     ],
   },
   {

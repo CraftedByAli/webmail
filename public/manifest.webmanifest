@@ -1,9 +1,17 @@
 {
-  "name": "Webmail",
-  "short_name": "Webmail",
+  "name": "OsmicMails",
+  "short_name": "OsmicMails",
+  "description": "Business email for every mailbox on your domain.",
+  "id": "/mail/inbox",
   "start_url": "/mail/inbox",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#2563eb",
-  "icons": [{ "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+  "theme_color": "#3B5BDB",
+  "icons": [
+    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
 }

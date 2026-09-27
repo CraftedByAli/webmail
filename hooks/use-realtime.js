@@ -4,27 +4,33 @@ import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { FOLDERS_KEY } from '@/hooks/use-folders';
+import { SESSION_KEY } from '@/hooks/use-session';
+import { ACCOUNTS_KEY } from '@/hooks/use-accounts';
 import { useUiStore } from '@/stores/ui-store';
+import { useAccountStore } from '@/stores/account-store';
+import { peekAccountQueryClient } from '@/utils/query-clients';
 import { notifyNewMail } from '@/hooks/use-notifications';
 
 const POLL_INTERVAL_MS = 60_000;
 
 /**
- * Subscribes to the SSE stream for mailbox changes. If the stream cannot be
- * established (proxy buffering, corporate networks, etc.) it degrades to
- * periodic polling. Also refreshes on tab focus.
+ * One SSE stream per tab carrying changes for every signed-in mailbox. Each
+ * event names its mailbox and only that mailbox's cache is touched, so
+ * activity in one mailbox can never refresh or leak into another. If the
+ * stream cannot be established (proxy buffering, corporate networks …) it
+ * degrades to polling. Also refreshes on tab focus.
  *
- * @param {{ enabled: boolean, preferences?: object, currentFolder?: string }} options
+ * Must run with the root query client (outside any mailbox scope).
+ *
+ * @param {{ enabled: boolean, accountsKey: string, onSwitch: (email: string, path?: string) => void }} options
  */
-export function useRealtime({ enabled, preferences, currentFolder }) {
-  const queryClient = useQueryClient();
+export function useRealtime({ enabled, accountsKey, onSwitch }) {
+  const rootClient = useQueryClient();
   const setStatus = useUiStore((s) => s.setRealtimeStatus);
-  const prefsRef = useRef(preferences);
-  const folderRef = useRef(currentFolder);
+  const switchRef = useRef(onSwitch);
   useEffect(() => {
-    prefsRef.current = preferences;
-    folderRef.current = currentFolder;
-  }, [preferences, currentFolder]);
+    switchRef.current = onSwitch;
+  }, [onSwitch]);
 
   useEffect(() => {
     if (!enabled || typeof window === 'undefined' || typeof EventSource === 'undefined')
@@ -35,26 +41,83 @@ export function useRealtime({ enabled, preferences, currentFolder }) {
     let failures = 0;
     let disposed = false;
     let reconnectTimer = null;
+    let accountsTimer = null;
+    const reauthWarned = new Set();
 
-    const refresh = (folder) => {
-      queryClient.invalidateQueries({ queryKey: FOLDERS_KEY });
-      queryClient.invalidateQueries({
-        queryKey: ['messages'],
-        predicate: (q) =>
-          !folder || q.queryKey[1]?.folder === folder || q.queryKey[1]?.role === 'starred',
-      });
+    const refreshAccounts = () => {
+      clearTimeout(accountsTimer);
+      accountsTimer = setTimeout(
+        () => rootClient.invalidateQueries({ queryKey: ACCOUNTS_KEY }),
+        400
+      );
+    };
+
+    const refresh = (account, folder) => {
+      const targets = account ? [account] : useAccountStore.getState().accounts.map((a) => a.email);
+      for (const email of targets) {
+        const client = peekAccountQueryClient(email);
+        if (!client) continue;
+        client.invalidateQueries({ queryKey: FOLDERS_KEY });
+        client.invalidateQueries({
+          queryKey: ['messages'],
+          predicate: (q) =>
+            !folder || q.queryKey[1]?.folder === folder || q.queryKey[1]?.role === 'starred',
+        });
+      }
+      refreshAccounts();
     };
 
     const startPolling = () => {
       if (pollTimer) return;
       setStatus('polling');
       pollTimer = setInterval(() => {
-        if (document.visibilityState === 'visible') refresh();
+        if (document.visibilityState === 'visible') refresh(null);
       }, POLL_INTERVAL_MS);
     };
     const stopPolling = () => {
       if (pollTimer) clearInterval(pollTimer);
       pollTimer = null;
+    };
+
+    const parse = (e) => {
+      try {
+        return JSON.parse(e.data);
+      } catch {
+        return {};
+      }
+    };
+
+    const onNewMail = (e) => {
+      const data = parse(e);
+      const account = data.account || useAccountStore.getState().active;
+      refresh(account, 'INBOX');
+      const messages = data.messages || [];
+      const active = useAccountStore.getState().active;
+      const prefs =
+        peekAccountQueryClient(account)?.getQueryData(SESSION_KEY)?.preferences ||
+        peekAccountQueryClient(active)?.getQueryData(SESSION_KEY)?.preferences;
+      const multi = useAccountStore.getState().accounts.length > 1;
+      if (prefs?.notifications?.newMail !== false && messages.length) {
+        const first = messages[0];
+        const who = first.from?.name || first.from?.address || 'New message';
+        const path = `/mail/inbox/message/${first.uid}?folder=INBOX`;
+        const other = account !== active;
+        toast(messages.length > 1 ? `${messages.length} new messages` : who, {
+          description: [
+            multi ? account : null,
+            messages.length > 1
+              ? `Latest: ${first.subject || '(no subject)'}`
+              : first.subject || '(no subject)',
+          ]
+            .filter(Boolean)
+            .join(' · '),
+          action: {
+            label: other ? 'Switch & open' : 'Open',
+            onClick: () => switchRef.current?.(account, path),
+          },
+        });
+      }
+      notifyNewMail(messages, prefs, { account, multi });
     };
 
     const connect = () => {
@@ -72,38 +135,27 @@ export function useRealtime({ enabled, preferences, currentFolder }) {
         setStatus('live');
       });
       source.addEventListener('connected', () => setStatus('live'));
-      source.addEventListener('new_mail', (e) => {
-        let data = {};
-        try {
-          data = JSON.parse(e.data);
-        } catch {
-          // ignore
-        }
-        refresh('INBOX');
-        const messages = data.messages || [];
-        const prefs = prefsRef.current;
-        if (prefs?.notifications?.newMail !== false && messages.length) {
-          const first = messages[0];
-          const who = first.from?.name || first.from?.address || 'New message';
-          toast(messages.length > 1 ? `${messages.length} new messages` : who, {
-            description:
-              messages.length > 1
-                ? `Latest: ${first.subject || '(no subject)'}`
-                : first.subject || '(no subject)',
-            action: {
-              label: 'Open',
-              onClick: () =>
-                window.location.assign(`/mail/inbox/message/${first.uid}?folder=INBOX`),
-            },
+      source.addEventListener('new_mail', onNewMail);
+      for (const type of ['mailbox_changed', 'expunge', 'flags']) {
+        source.addEventListener(type, (e) => refresh(parse(e).account || null, 'INBOX'));
+      }
+      source.addEventListener('disconnected', () => setStatus('polling'));
+      source.addEventListener('auth_failed', (e) => {
+        // One mailbox's password changed: flag it in the switcher instead of
+        // throwing the whole browser back to the sign-in page.
+        const account = parse(e).account;
+        refreshAccounts();
+        if (account && !reauthWarned.has(account)) {
+          reauthWarned.add(account);
+          toast.error(`${account} needs to sign in again`, {
+            description: 'Its password was changed or the mailbox was disabled.',
           });
         }
-        notifyNewMail(messages, prefs);
       });
-      source.addEventListener('mailbox_changed', () => refresh('INBOX'));
-      source.addEventListener('expunge', () => refresh('INBOX'));
-      source.addEventListener('flags', () => refresh('INBOX'));
-      source.addEventListener('disconnected', () => setStatus('polling'));
-      source.addEventListener('auth_failed', () => {
+      source.addEventListener('accounts_changed', () => {
+        rootClient.invalidateQueries({ queryKey: ACCOUNTS_KEY });
+      });
+      source.addEventListener('session_ended', () => {
         window.location.assign('/login?reason=expired');
       });
       source.onerror = () => {
@@ -120,18 +172,23 @@ export function useRealtime({ enabled, preferences, currentFolder }) {
     };
 
     const onVisible = () => {
-      if (document.visibilityState === 'visible') refresh(folderRef.current);
+      if (document.visibilityState === 'visible') refresh(useAccountStore.getState().active);
+    };
+    const onOnline = () => {
+      if (!source) connect();
     };
     document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('online', () => connect());
+    window.addEventListener('online', onOnline);
 
     connect();
     return () => {
       disposed = true;
       document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('online', onOnline);
       if (source) source.close();
-      if (reconnectTimer) clearTimeout(reconnectTimer);
+      clearTimeout(reconnectTimer);
+      clearTimeout(accountsTimer);
       stopPolling();
     };
-  }, [enabled, queryClient, setStatus]);
+  }, [enabled, accountsKey, rootClient, setStatus]);
 }

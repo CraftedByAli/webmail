@@ -6,7 +6,7 @@ import { useTheme } from 'next-themes';
 import {
   PanelLeft,
   Settings,
-  LogOut,
+  ShieldOff,
   Moon,
   Sun,
   Monitor,
@@ -19,7 +19,11 @@ import { toast } from 'sonner';
 import { Logo } from '@/components/layout/logo';
 import { SearchBar } from '@/components/search/search-bar';
 import { IconButton } from '@/components/ui/icon-button';
-import { Avatar } from '@/components/ui/avatar';
+import {
+  MailboxAvatar,
+  MailboxMenuItems,
+  SignOutMenuItems,
+} from '@/components/layout/account-switcher';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,9 +35,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { apiPost } from '@/utils/api-client';
 import { useUiStore } from '@/stores/ui-store';
 import { useUpdatePreferences } from '@/hooks/use-session';
+import { useApi } from '@/hooks/use-account';
+import { useAccountActions } from '@/hooks/use-accounts';
+import { useAccountStore } from '@/stores/account-store';
 
 /**
  * The brand block is exactly one sidebar wide, so search begins on the same
@@ -45,15 +51,23 @@ export function TopBar({ user, isAdmin }) {
   const realtimeStatus = useUiStore((s) => s.realtimeStatus);
   const { theme, setTheme } = useTheme();
   const updatePrefs = useUpdatePreferences();
+  const api = useApi();
+  const { forgetLocally } = useAccountActions();
+  const mailboxCount = useAccountStore((s) => s.accounts.length);
 
-  async function logout() {
+  async function signOutEverywhere() {
     try {
-      await apiPost('/api/auth/logout');
-    } catch {
-      // The cookie is cleared regardless; always land on the login screen.
+      const res = await api.post('/api/auth/logout-all');
+      if (res.signedOut) {
+        router.replace('/login');
+        router.refresh();
+        return;
+      }
+      toast.success(`${user.email} was signed out on every device`);
+      forgetLocally(user.email, res.next);
+    } catch (e) {
+      toast.error(e.message);
     }
-    router.replace('/login');
-    router.refresh();
   }
 
   function changeTheme(value) {
@@ -77,7 +91,7 @@ export function TopBar({ user, isAdmin }) {
 
       <Link
         href="/mail/inbox"
-        aria-label="Webmail — go to Inbox"
+        aria-label="OsmicMails — go to Inbox"
         className="focus-visible:outline-focus rounded-control flex h-8 shrink-0 items-center px-1.5 focus-visible:outline-2 focus-visible:outline-offset-2 md:w-[calc(var(--rail-w)-0.5rem)]"
       >
         <Logo showText />
@@ -128,14 +142,21 @@ export function TopBar({ user, isAdmin }) {
               className="hover:bg-hover focus-visible:outline-focus rounded-control ml-0.5 grid size-8 place-items-center transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
               aria-label={`Account menu for ${user.email}`}
             >
-              <Avatar address={{ address: user.email }} size="sm" />
+              <MailboxAvatar email={user.email} size="sm" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-60">
-            <div className="px-2 py-1.5">
-              <p className="text-meta text-fg-muted">Signed in as</p>
-              <p className="text-ui text-fg truncate font-medium">{user.email}</p>
+          <DropdownMenuContent align="end" className="w-72">
+            <div className="flex items-center gap-2.5 px-2 py-1.5">
+              <MailboxAvatar email={user.email} size="lg" />
+              <div className="min-w-0">
+                <p className="text-meta text-fg-muted">
+                  {mailboxCount > 1 ? 'Viewing mailbox' : 'Signed in as'}
+                </p>
+                <p className="text-ui text-fg truncate font-medium">{user.email}</p>
+              </div>
             </div>
+            <DropdownMenuSeparator />
+            <MailboxMenuItems />
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link href="/settings">
@@ -168,20 +189,9 @@ export function TopBar({ user, isAdmin }) {
               </DropdownMenuRadioItem>
             </DropdownMenuRadioGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={logout}>
-              <LogOut /> Sign out
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onSelect={async () => {
-                try {
-                  await apiPost('/api/auth/logout-all');
-                  router.replace('/login');
-                } catch (e) {
-                  toast.error(e.message);
-                }
-              }}
-            >
-              <LogOut /> Sign out everywhere
+            <SignOutMenuItems />
+            <DropdownMenuItem onSelect={signOutEverywhere}>
+              <ShieldOff /> Sign {mailboxCount > 1 ? 'this mailbox ' : ''}out everywhere
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

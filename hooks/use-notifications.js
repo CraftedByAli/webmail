@@ -28,11 +28,16 @@ export async function requestNotificationPermission() {
   }
 }
 
-export function notifyNewMail(messages, preferences) {
+/**
+ * @param {object[]} messages
+ * @param {object} preferences
+ * @param {{ account?: string, multi?: boolean }} [context]
+ */
+export function notifyNewMail(messages, preferences, { account, multi = false } = {}) {
   if (!preferences?.notifications?.desktop) return;
   if (!notificationsSupported() || Notification.permission !== 'granted') return;
   if (document.visibilityState === 'visible' && document.hasFocus()) return;
-  pending.push(...messages);
+  pending.push(...messages.map((m) => ({ ...m, account })));
   if (flushTimer) clearTimeout(flushTimer);
   flushTimer = setTimeout(() => {
     const batch = pending;
@@ -40,10 +45,12 @@ export function notifyNewMail(messages, preferences) {
     flushTimer = null;
     if (batch.length === 0) return;
     const first = batch[0];
+    const mailboxes = [...new Set(batch.map((m) => m.account).filter(Boolean))];
     const title =
       batch.length === 1
         ? first.from?.name || first.from?.address || 'New email'
         : `${batch.length} new emails`;
+    const suffix = multi && mailboxes.length ? `\n${mailboxes.join(', ')}` : '';
     const body =
       batch.length === 1
         ? first.subject || '(no subject)'
@@ -53,15 +60,18 @@ export function notifyNewMail(messages, preferences) {
             .join('\n');
     try {
       const n = new Notification(title, {
-        body,
-        tag: 'webmail-new-mail',
+        body: body + suffix,
+        tag: 'osmicmails-new-mail',
         icon: '/icons/icon.svg',
         silent: !preferences.notifications.sound,
       });
       n.onclick = () => {
         window.focus();
+        const accountParam = first.account ? `account=${encodeURIComponent(first.account)}` : '';
         window.location.assign(
-          batch.length === 1 ? `/mail/inbox/message/${first.uid}?folder=INBOX` : '/mail/inbox'
+          batch.length === 1
+            ? `/mail/inbox/message/${first.uid}?folder=INBOX${accountParam ? `&${accountParam}` : ''}`
+            : `/mail/inbox${accountParam ? `?${accountParam}` : ''}`
         );
         n.close();
       };

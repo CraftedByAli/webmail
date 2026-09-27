@@ -9,7 +9,10 @@ export const dynamic = 'force-dynamic';
 
 export default async function DiagnosticsPage() {
   const { session: sessionConfig, app } = getConfig();
-  const session = resolveSession((await cookies()).get(sessionConfig.cookieName)?.value);
+  const jar = await cookies();
+  const session = resolveSession(jar.get(sessionConfig.cookieName)?.value, {
+    preferred: jar.get(sessionConfig.accountCookieName)?.value || null,
+  });
   if (!session) redirect('/login');
   if (!app.adminEmails.includes(session.email)) redirect('/mail/inbox');
   return <DiagnosticsView />;

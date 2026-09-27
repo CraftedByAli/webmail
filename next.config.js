@@ -35,7 +35,6 @@ const nextConfig = {
         source: '/(.*)',
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           {
             key: 'Permissions-Policy',
@@ -44,6 +43,12 @@ const nextConfig = {
           { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
           { key: 'X-DNS-Prefetch-Control', value: 'off' },
         ],
+      },
+      {
+        // Attachments set their own SAMEORIGIN framing policy so the in-app
+        // previewer can show PDFs; every other response refuses framing.
+        source: '/((?!api/attachments).*)',
+        headers: [{ key: 'X-Frame-Options', value: 'DENY' }],
       },
     ];
   },

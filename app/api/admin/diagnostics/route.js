@@ -38,6 +38,12 @@ export const GET = createHandler(async ({ session }) => {
       requireTLS: config.smtp.requireTLS,
       ...status.smtp,
     },
+    sieve: {
+      host: config.sieve.host,
+      port: config.sieve.port,
+      requireTLS: config.sieve.requireTLS,
+      ...(status.sieve || { ok: false, disabled: true }),
+    },
     realtime: { subscribers: realtimeHub.subscriberCount(session.email) },
     limits: config.limits,
   });

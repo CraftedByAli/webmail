@@ -1,8 +1,8 @@
 {
-  "name": "mailcow-webmail",
-  "version": "0.1.0",
+  "name": "osmicmails",
+  "version": "0.2.0",
   "private": true,
-  "description": "Gmail-style webmail client for Mailcow (IMAP/SMTP), built with Next.js",
+  "description": "OsmicMails — multi-mailbox business webmail for Mailcow (IMAP/SMTP/ManageSieve), built with Next.js",
   "type": "module",
   "engines": {
     "node": ">=20.11"
@@ -21,7 +21,7 @@
     "test:e2e": "playwright test",
     "test:all": "npm run test && npm run test:integration && npm run test:e2e",
     "check:mailcow": "node --env-file=.env scripts/check-mailcow.js",
-    "docker:build": "docker build -t mailcow-webmail:local ."
+    "docker:build": "docker build -t osmicmails:local ."
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.2.6",
