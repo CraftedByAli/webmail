@@ -4,7 +4,7 @@
 #   docker compose -f docker-compose.yml -f docker-compose.production.yml up -d
 services:
   webmail:
-    image: ghcr.io/your-org/mailcow-webmail:${WEBMAIL_VERSION:-latest}
+    image: ghcr.io/your-org/osmicmails:${WEBMAIL_VERSION:-latest}
     build: null
     ports:
       - '127.0.0.1:3004:3000'

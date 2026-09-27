@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FolderList } from '@/components/sidebar/folder-list';
 import { FolderDialog } from '@/components/sidebar/folder-dialog';
+import { SidebarMailboxSwitcher } from '@/components/layout/account-switcher';
 import { useFolders } from '@/hooks/use-folders';
 import { useComposeStore } from '@/stores/compose-store';
 import { useUiStore } from '@/stores/ui-store';
@@ -26,7 +27,10 @@ export function Sidebar({ mobile = false }) {
 
   return (
     <nav aria-label="Mail folders" className="bg-canvas flex h-full flex-col">
-      <div className="px-2.5 pt-2.5 pb-1">
+      <div className="px-2.5 pt-2 pb-1">
+        <div className="mb-2">
+          <SidebarMailboxSwitcher onNavigate={() => setSidebarOpen(false)} />
+        </div>
         <Button
           variant="primary"
           size="lg"

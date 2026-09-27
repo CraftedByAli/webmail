@@ -104,7 +104,7 @@ npm ci && npm run build
 
 ```ini
 [Unit]
-Description=Mailcow Webmail
+Description=OsmicMails
 After=network.target
 
 [Service]

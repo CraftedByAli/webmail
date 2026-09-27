@@ -8,6 +8,7 @@ The webmail is a regular IMAP/SMTP client; Mailcow needs no changes. These notes
 | --------------- | ----------------------------------------------- | ---- | -------------------- | ------------------------------- |
 | IMAP            | `${MAILCOW_HOSTNAME}` (e.g. `mail.example.com`) | 993  | implicit TLS (IMAPS) | full mailbox address + password |
 | SMTP submission | `${MAILCOW_HOSTNAME}`                           | 587  | STARTTLS (required)  | same                            |
+| ManageSieve     | `${MAILCOW_HOSTNAME}`                           | 4190 | STARTTLS (required)  | same (SASL PLAIN)               |
 
 Alternative: SMTP on 465 with `MAIL_SMTP_SECURE=true`.
 
@@ -51,6 +52,30 @@ Postfix does not store sent mail. The webmail appends every sent message to the 
 ## App passwords and 2FA
 
 Mailcow app passwords work for IMAP/SMTP; TFA configured for the Mailcow UI does not apply to IMAP/SMTP logins.
+
+## Forwarding (Sieve)
+
+Forwarding is implemented as a per-mailbox Sieve script named `osmicmails-forwarding`, uploaded over ManageSieve
+(RFC 5804) with the mailbox's own credentials — no Mailcow API key or admin rights are needed.
+
+- The script uses `redirect :copy` (keep a copy) or `redirect`, wrapped in
+  `if not anyof (header :contains "X-Spam-Flag" "YES", header :contains "X-Spam" "Yes")` when spam is skipped.
+- Its settings are stored as a JSON comment inside the script, so the configuration lives on the mail server.
+- A mailbox can have only one active Sieve script. If another one was active (SOGo filters or vacation, Roundcube
+  managesieve …) it is included with `include :personal :optional "<name>"` so it keeps working, and it is
+  re-activated when forwarding is turned off.
+- Mailcow's own UI filters (`sieve_before` / `sieve_after`, incl. the global spam → Junk rule) keep running around it.
+- Mailcow configures `sieve_redirect_envelope_from = recipient` and `sieve_max_redirects = 100`; plain Dovecot defaults
+  to the original sender and 4 redirects (hence `MAX_FORWARD_ADDRESSES=4`).
+- Loops (A → B → A) are stopped by Postfix's `Delivered-To` loop detection; forwarding to the mailbox itself is refused.
+- Organisations that must keep mail in-house can restrict destinations with `MAIL_FORWARDING_ALLOWED_DOMAINS` or turn
+  the feature off with `MAIL_FORWARDING_ENABLED=false`.
+
+## Multiple mailboxes
+
+Each mailbox added to a browser session is authenticated against Dovecot individually and gets its own IMAP pool and
+IDLE connection. Dovecot's per-user connection limit (`mail_max_userip_connections`) therefore applies per mailbox, not
+to the sum.
 
 ## SOGo
 

@@ -16,7 +16,7 @@ import {
   Inbox,
   Printer,
 } from 'lucide-react';
-import { apiGet } from '@/utils/api-client';
+import { useApi } from '@/hooks/use-account';
 import { useThread, threadKey } from '@/hooks/use-messages';
 import { useFolders } from '@/hooks/use-folders';
 import { useMailActions } from '@/hooks/use-mail-actions';
@@ -37,6 +37,7 @@ import { QuickReply } from '@/components/mail/quick-reply';
  * recent message open automatically; everything else collapses to a single row.
  */
 export function ThreadView({ folder, uids, messageUid, backHref, roles }) {
+  const api = useApi();
   const router = useRouter();
   const prefs = usePreferences();
   const { data: session } = useSession();
@@ -48,7 +49,7 @@ export function ThreadView({ folder, uids, messageUid, backHref, roles }) {
   // Opening a single message resolves its conversation first.
   const lookup = useQuery({
     queryKey: ['thread-lookup', folder, messageUid],
-    queryFn: () => apiGet(`/api/mail/messages/${messageUid}/thread`, { folder }),
+    queryFn: () => api.get(`/api/mail/messages/${messageUid}/thread`, { folder }),
     enabled: !!messageUid && !uids,
     staleTime: 30_000,
   });

@@ -9,21 +9,35 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InlineError } from '@/components/ui/error-state';
-import { apiDelete, apiGet, apiPost } from '@/utils/api-client';
+import { useApi } from '@/hooks/use-account';
+import { useAccountActions } from '@/hooks/use-accounts';
 import { formatFullDate, formatRelative } from '@/utils/format';
 
-export function SecuritySettings() {
+export function SecuritySettings({ session }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const api = useApi();
+  const { forgetLocally } = useAccountActions();
+  const email = session?.user?.email;
   const sessions = useQuery({
     queryKey: ['sessions'],
-    queryFn: () => apiGet('/api/auth/sessions'),
+    queryFn: () => api.get('/api/auth/sessions'),
   });
 
+  const leaveThisDevice = (res) => {
+    if (res.signedOut) {
+      router.replace('/login');
+      router.refresh();
+    } else {
+      toast.success(`${email} was signed out`);
+      forgetLocally(email, res.next);
+    }
+  };
+
   const revoke = useMutation({
-    mutationFn: (id) => apiDelete('/api/auth/sessions', { id }),
+    mutationFn: (id) => api.delete('/api/auth/sessions', { id }),
     onSuccess: (res) => {
-      if (res.current) router.replace('/login');
+      if (res.current) leaveThisDevice(res);
       else {
         queryClient.invalidateQueries({ queryKey: ['sessions'] });
         toast.success('Session signed out');
@@ -33,8 +47,8 @@ export function SecuritySettings() {
   });
 
   const revokeAll = useMutation({
-    mutationFn: () => apiPost('/api/auth/logout-all'),
-    onSuccess: () => router.replace('/login'),
+    mutationFn: () => api.post('/api/auth/logout-all'),
+    onSuccess: leaveThisDevice,
     onError: (e) => toast.error(e.message),
   });
 
@@ -44,7 +58,7 @@ export function SecuritySettings() {
     <>
       <SettingsSection
         title="Active sessions"
-        description="Every browser currently signed in to this mailbox. Revoking a session signs it out immediately."
+        description={`Every browser currently signed in to ${email}. Revoking a session signs this mailbox out of it immediately; other mailboxes on that device are not affected.`}
       >
         {sessions.isPending ? (
           <div className="grid gap-2">
@@ -68,6 +82,7 @@ export function SecuritySettings() {
                     </p>
                     <p className="text-caption text-fg-muted truncate">
                       {s.ip ? `${s.ip} · ` : ''}active {formatRelative(s.lastSeenAt)}
+                      {s.mailboxCount > 1 ? ` · ${s.mailboxCount} mailboxes` : ''}
                     </p>
                   </div>
                   <Button
@@ -85,7 +100,7 @@ export function SecuritySettings() {
         )}
         <div>
           <Button variant="danger" onClick={() => revokeAll.mutate()} loading={revokeAll.isPending}>
-            Sign out of all sessions
+            Sign {email} out everywhere
           </Button>
         </div>
       </SettingsSection>

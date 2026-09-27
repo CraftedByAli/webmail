@@ -13,10 +13,14 @@ import { SignatureSettings } from '@/components/settings/signature-settings';
 import { ShortcutSettings } from '@/components/settings/shortcut-settings';
 import { SecuritySettings } from '@/components/settings/security-settings';
 import { AboutSettings } from '@/components/settings/about-settings';
+import { MailboxSettings } from '@/components/settings/mailbox-settings';
+import { ForwardingSettings } from '@/components/settings/forwarding-settings';
 import { useSession } from '@/hooks/use-session';
 
 const SECTIONS = [
   ['general', 'General', GeneralSettings],
+  ['mailboxes', 'Mailboxes', MailboxSettings],
+  ['forwarding', 'Forwarding', ForwardingSettings],
   ['appearance', 'Appearance', AppearanceSettings],
   ['inbox', 'Reading', InboxSettings],
   ['notifications', 'Notifications', NotificationSettings],
@@ -43,7 +47,12 @@ export function SettingsView() {
         <IconButton label="Back to mail" onClick={() => router.push('/mail/inbox')}>
           <ArrowLeft />
         </IconButton>
-        <h1 className="text-title text-fg font-semibold">Settings</h1>
+        <h1 className="text-title text-fg min-w-0 truncate font-semibold">
+          Settings
+          {session?.user?.email ? (
+            <span className="text-fg-muted font-normal"> · {session.user.email}</span>
+          ) : null}
+        </h1>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">

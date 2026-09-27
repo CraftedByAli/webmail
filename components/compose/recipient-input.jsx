@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import { X } from 'lucide-react';
-import { apiGet } from '@/utils/api-client';
+import { useApi } from '@/hooks/use-account';
 import { Avatar } from '@/components/ui/avatar';
 import { cn } from '@/utils/cn';
 
@@ -28,6 +28,7 @@ function parseTyped(text) {
  * so a typo is visible before sending instead of bouncing afterwards.
  */
 export function RecipientInput({ id, label, value, onChange, autoFocus, trailing }) {
+  const api = useApi();
   const [text, setText] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [active, setActive] = useState(0);
@@ -43,7 +44,7 @@ export function RecipientInput({ id, label, value, onChange, autoFocus, trailing
         return;
       }
       try {
-        const res = await apiGet('/api/contacts/suggest', { q });
+        const res = await api.get('/api/contacts/suggest', { q });
         const existing = new Set(value.map((v) => v.address));
         setSuggestions((res.suggestions || []).filter((s) => !existing.has(s.address)));
         setActive(0);
@@ -53,7 +54,7 @@ export function RecipientInput({ id, label, value, onChange, autoFocus, trailing
       }
     }, 150);
     return () => clearTimeout(timer);
-  }, [text, value]);
+  }, [api, text, value]);
 
   function commit(items) {
     const existing = new Set(value.map((v) => v.address));

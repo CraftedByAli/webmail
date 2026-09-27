@@ -7,9 +7,9 @@ export function AboutSettings({ session }) {
     <SettingsSection title="About">
       <div className="text-body text-fg-secondary grid gap-3">
         <p>
-          <span className="text-fg font-medium">Webmail</span> is a client for your own mail server.
-          Messages, folders and search all live on that server — this application stores only your
-          preferences, contacts and signatures.
+          <span className="text-fg font-medium">OsmicMails</span> is the mail client for your
+          company&apos;s own mail server. Messages, folders and search all live on that server —
+          this application stores only your preferences, contacts and signatures.
         </p>
         <p>
           Mail is read over IMAP and sent over authenticated SMTP. Deleting this application would

@@ -40,7 +40,7 @@ import { RichTextEditor } from '@/components/compose/rich-text-editor';
 import { AttachmentPicker, useAttachmentUploads } from '@/components/compose/attachment-picker';
 import { useComposeStore } from '@/stores/compose-store';
 import { useSession } from '@/hooks/use-session';
-import { apiPost, apiDelete } from '@/utils/api-client';
+import { useApi } from '@/hooks/use-account';
 import { cn } from '@/utils/cn';
 
 const AUTOSAVE_DELAY_MS = 3000;
@@ -52,7 +52,8 @@ const AUTOSAVE_DELAY_MS = 3000;
  * rows and one primary Send. Writing is the content; the window should not
  * compete with it.
  */
-export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
+export function ComposeWindow({ win, mobile = false, minimizedBar = false, showFrom = false }) {
+  const api = useApi();
   const { id, data, mode, expanded, showCc, showBcc, loading } = win;
   const update = useComposeStore((s) => s.update);
   const updateData = useComposeStore((s) => s.updateData);
@@ -146,7 +147,7 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
       if (loading || sending || isEmpty()) return null;
       update(id, { saving: true });
       try {
-        const result = await apiPost('/api/drafts', payload());
+        const result = await api.post('/api/drafts', payload());
         update(id, {
           saving: false,
           savedAt: Date.now(),
@@ -167,7 +168,7 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [id, loading, sending, payload, update, queryClient, attachments.length]
+    [api, id, loading, sending, payload, update, queryClient, attachments.length]
   );
 
   useEffect(() => {
@@ -193,7 +194,7 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
     if (!d.subject.trim() && !window.confirm('Send this message without a subject?')) return;
     setSending(true);
     try {
-      await apiPost('/api/mail/send', payload());
+      await api.post('/api/mail/send', payload());
       toast.success('Message sent');
       queryClient.invalidateQueries({ queryKey: ['messages'] });
       queryClient.invalidateQueries({ queryKey: ['folders'] });
@@ -211,7 +212,7 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
     close(id);
     if (d.draftUid) {
       try {
-        await apiDelete('/api/drafts', { uid: d.draftUid });
+        await api.delete('/api/drafts', { uid: d.draftUid });
         queryClient.invalidateQueries({ queryKey: ['messages'] });
         queryClient.invalidateQueries({ queryKey: ['folders'] });
       } catch {
@@ -219,7 +220,7 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
       }
     }
     for (const u of uploads) {
-      if (u.uploadId) apiDelete('/api/attachments/upload', { id: u.uploadId }).catch(() => {});
+      if (u.uploadId) api.delete('/api/attachments/upload', { id: u.uploadId }).catch(() => {});
     }
     toast('Draft discarded');
   }
@@ -264,6 +265,7 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
           type="button"
           className="text-ui text-fg min-w-0 flex-1 truncate text-left font-medium"
           onClick={() => minimize(id, false)}
+          title={win.account ? `From ${win.account}` : undefined}
         >
           {data.subject || title}
         </button>
@@ -313,6 +315,9 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
       <header className="border-line bg-canvas flex h-10 shrink-0 items-center gap-0.5 border-b pr-1 pl-3">
         <h2 className="text-ui text-fg min-w-0 flex-1 truncate font-medium">
           {data.subject || title}
+          {showFrom && win.account ? (
+            <span className="text-fg-muted font-normal"> · {win.account}</span>
+          ) : null}
         </h2>
         {!mobile ? (
           <>
@@ -352,6 +357,15 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false }) {
       ) : (
         <>
           <div className="border-line shrink-0 border-b px-3">
+            {showFrom && win.account ? (
+              <div
+                className="border-line text-ui flex h-9 items-center gap-2 border-b"
+                data-testid="compose-from"
+              >
+                <span className="text-fg-muted w-10 shrink-0">From</span>
+                <span className="text-fg truncate font-medium">{win.account}</span>
+              </div>
+            ) : null}
             <RecipientInput
               id={`${id}-to`}
               label="To"

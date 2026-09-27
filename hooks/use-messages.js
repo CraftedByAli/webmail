@@ -1,7 +1,7 @@
 'use client';
 
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { apiGet } from '@/utils/api-client';
+import { useApi } from '@/hooks/use-account';
 
 export const listKey = (params) => ['messages', params];
 export const threadKey = (folder, uids) => [
@@ -16,11 +16,12 @@ export const messageKey = (folder, uid, images) => ['message', folder, uid, !!im
  * @param {{ folder: string|null, role?: string, query?: string, conversation: boolean, pageSize: number, enabled?: boolean }} params
  */
 export function useMessageList(params) {
+  const api = useApi();
   const { folder, role, query, conversation, pageSize, enabled = true } = params;
   return useInfiniteQuery({
     queryKey: listKey({ folder, role, query, conversation, pageSize }),
     queryFn: ({ pageParam = 0 }) =>
-      apiGet('/api/mail/messages', {
+      api.get('/api/mail/messages', {
         folder,
         role,
         q: query,
@@ -39,19 +40,21 @@ export function useMessageList(params) {
 }
 
 export function useThread(folder, uids, options = {}) {
+  const api = useApi();
   return useQuery({
     queryKey: threadKey(folder, uids || []),
-    queryFn: () => apiGet('/api/mail/threads', { folder, uids: uids.join(',') }),
+    queryFn: () => api.get('/api/mail/threads', { folder, uids: uids.join(',') }),
     enabled: !!folder && Array.isArray(uids) && uids.length > 0 && options.enabled !== false,
     staleTime: 30_000,
   });
 }
 
 export function useMessage(folder, uid, { images = false, enabled = true, markRead = true } = {}) {
+  const api = useApi();
   return useQuery({
     queryKey: messageKey(folder, uid, images),
     queryFn: () =>
-      apiGet(`/api/mail/messages/${uid}`, {
+      api.get(`/api/mail/messages/${uid}`, {
         folder,
         images: images ? 1 : 0,
         markRead: markRead ? 1 : 0,

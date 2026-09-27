@@ -43,7 +43,7 @@ export function LoginForm({ host }) {
 
   return (
     <div className="w-full max-w-[22rem]">
-      <Logo className="mb-7" showText />
+      <Logo className="mb-7" size="lg" />
 
       <h1 className="text-display text-fg font-semibold tracking-tight">Sign in</h1>
       <p className="text-body text-fg-secondary mt-1">

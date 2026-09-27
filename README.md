@@ -1,6 +1,10 @@
-# Mailcow Webmail
+<p><img src="public/brand/osmicmails-logo.svg" alt="OsmicMails" height="56"></p>
 
-A production-grade, Gmail-style webmail client for an existing **Mailcow** installation.
+# OsmicMails
+
+**OsmicMails** is a production-grade, Gmail-style business webmail for an existing **Mailcow** installation — built
+for companies that run several mailboxes per domain (`info@`, `sales@`, `support@` …) and want to work in all of them
+from one screen.
 Built with **Next.js 16 (App Router), React 19, JavaScript, Tailwind CSS 4** and Radix UI primitives.
 
 Mailcow (Dovecot + Postfix) remains the mail server: storage, delivery, spam filtering, DKIM/SPF/DMARC,
@@ -14,6 +18,17 @@ Browser ──HTTPS──▶ Next.js (Node) ──IMAPS 993──▶ Dovecot (Ma
 
 ## Features
 
+- **Multiple mailboxes at once**: sign in to up to 10 mailboxes (configurable) in one browser and switch instantly
+  from the sidebar, the account menu or with `g` then `1`–`9`. Every mailbox keeps its own mail, folders, drafts,
+  contacts, signatures, preferences and forwarding — separate server-side credentials, separate caches in the browser,
+  and every request is pinned to its mailbox, so mail can never be mixed. Unread counts and notifications for the other
+  mailboxes stay live; each browser tab can show a different mailbox.
+- **Mail forwarding per mailbox**: forward new mail to up to 4 addresses (configurable), keep or drop a copy, skip
+  spam, send a test. It runs on the mail server as a Sieve script (ManageSieve), so it works while nobody is signed in,
+  and existing Sieve filters (SOGo, Roundcube…) keep running.
+- **Attachments**: reliable downloads (with error messages instead of broken files), "Download all", and in-app
+  previews for images (incl. SVG, safely), PDF, text/code, CSV (as a table), audio, video and attached e-mails, with
+  previous/next navigation.
 - **Gmail-like experience**: conversation view, star/archive/spam/trash, bulk actions, drag-and-drop to folders,
   keyboard shortcuts (`c`, `r`, `a`, `f`, `e`, `#`, `j`/`k`, `g i`, `?` …), infinite scrolling with a virtualised list.
 - **Compose**: rich text (Tiptap), recipient chips with autocomplete, Cc/Bcc, attachments with progress, inline
@@ -36,7 +51,7 @@ Browser ──HTTPS──▶ Next.js (Node) ──IMAPS 993──▶ Dovecot (Ma
 - **Security**: HttpOnly/Secure/SameSite cookies, encrypted credential storage, CSRF protection, strict CSP with
   nonces, rate limiting and login throttling, attachment validation by magic bytes, filename sanitization, no
   arbitrary IMAP/SMTP/URL access. See [docs/SECURITY.md](docs/SECURITY.md).
-- **Tests**: 66 unit, 23 integration and 9 Playwright end-to-end tests run against an in-memory mock mail
+- **Tests**: 110 unit, 36 integration and 16 Playwright end-to-end tests run against an in-memory mock mail
   provider — CI needs no Mailcow. An optional live suite runs against a real mailbox.
 
 ## Table of contents
@@ -83,29 +98,37 @@ MAIL_USER=you@example.com MAIL_PASS='your-password' npm run check:mailcow
 
 All configuration comes from the environment (see [`.env.example`](.env.example)). Nothing is hard-coded.
 
-| Variable                       | Default                        | Description                                                                                            |
-| ------------------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| `APP_URL`                      | `http://localhost:3000`        | Public URL. `https://` enables Secure cookies and HTTPS redirects.                                     |
-| `SESSION_SECRET`               | —                              | **Required in production**, ≥ 32 random characters. Used for cookie hashing and credential encryption. |
-| `SESSION_TTL_HOURS`            | `168`                          | Sliding session lifetime.                                                                              |
-| `ADMIN_EMAILS`                 | —                              | Comma-separated mailboxes allowed to open `/admin/diagnostics`.                                        |
-| `MAIL_IMAP_HOST`               | —                              | **Required.** Mailcow hostname (e.g. `mail.example.com`).                                              |
-| `MAIL_IMAP_PORT`               | `993`                          |                                                                                                        |
-| `MAIL_IMAP_TLS`                | `true`                         | `true` = IMAPS, `false` = plain + STARTTLS (port 143).                                                 |
-| `MAIL_SMTP_HOST`               | —                              | **Required.** Usually the same host.                                                                   |
-| `MAIL_SMTP_PORT`               | `587`                          |                                                                                                        |
-| `MAIL_SMTP_SECURE`             | `false`                        | `true` for implicit TLS on 465.                                                                        |
-| `MAIL_SMTP_REQUIRE_TLS`        | `true`                         | Refuse to authenticate without STARTTLS.                                                               |
-| `MAIL_TLS_REJECT_UNAUTHORIZED` | `true`                         | Only set `false` for self-signed certificates in a lab.                                                |
-| `MAX_ATTACHMENT_SIZE_MB`       | `50`                           | Per attachment upload limit. Match Mailcow's `message_size_limit`.                                     |
-| `MAX_MESSAGE_SIZE_MB`          | `60`                           | Largest message the viewer will download in full.                                                      |
-| `IMAP_POOL_SIZE`               | `3`                            | IMAP connections per signed-in mailbox.                                                                |
-| `IMAP_IDLE_TIMEOUT_SECONDS`    | `300`                          | Idle pooled connections are logged out after this.                                                     |
-| `DATABASE_PATH`                | `./data/webmail.db`            | SQLite file for sessions, preferences, contacts, signatures.                                           |
-| `UPLOAD_DIR`                   | `./data/uploads`               | Temporary compose attachments (auto-cleaned).                                                          |
-| `LOG_LEVEL`                    | `info`                         | `trace` … `error`.                                                                                     |
-| `LOG_FORMAT`                   | `pretty` (dev) / `json` (prod) |                                                                                                        |
-| `MAIL_PROVIDER`                | `imap`                         | `mock` is for tests only and refused in production.                                                    |
+| Variable                          | Default                        | Description                                                                                             |
+| --------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `APP_URL`                         | `http://localhost:3000`        | Public URL. `https://` enables Secure cookies and HTTPS redirects.                                      |
+| `SESSION_SECRET`                  | —                              | **Required in production**, ≥ 32 random characters. Used for cookie hashing and credential encryption.  |
+| `SESSION_TTL_HOURS`               | `168`                          | Sliding session lifetime.                                                                               |
+| `ADMIN_EMAILS`                    | —                              | Comma-separated mailboxes allowed to open `/admin/diagnostics`.                                         |
+| `MAX_MAILBOXES_PER_SESSION`       | `10`                           | How many mailboxes one browser may be signed in to at once (1–20).                                      |
+| `MAIL_IMAP_HOST`                  | —                              | **Required.** Mailcow hostname (e.g. `mail.example.com`).                                               |
+| `MAIL_IMAP_PORT`                  | `993`                          |                                                                                                         |
+| `MAIL_IMAP_TLS`                   | `true`                         | `true` = IMAPS, `false` = plain + STARTTLS (port 143).                                                  |
+| `MAIL_SMTP_HOST`                  | —                              | **Required.** Usually the same host.                                                                    |
+| `MAIL_SMTP_PORT`                  | `587`                          |                                                                                                         |
+| `MAIL_SMTP_SECURE`                | `false`                        | `true` for implicit TLS on 465.                                                                         |
+| `MAIL_SMTP_REQUIRE_TLS`           | `true`                         | Refuse to authenticate without STARTTLS.                                                                |
+| `MAIL_TLS_REJECT_UNAUTHORIZED`    | `true`                         | Only set `false` for self-signed certificates in a lab.                                                 |
+| `MAIL_SIEVE_ENABLED`              | `true`                         | Use ManageSieve (Dovecot) for forwarding.                                                               |
+| `MAIL_SIEVE_HOST`                 | `MAIL_IMAP_HOST`               | ManageSieve host.                                                                                       |
+| `MAIL_SIEVE_PORT`                 | `4190`                         | Mailcow publishes ManageSieve on 4190.                                                                  |
+| `MAIL_SIEVE_REQUIRE_TLS`          | `true`                         | Require STARTTLS before sending the password.                                                           |
+| `MAIL_FORWARDING_ENABLED`         | `true`                         | Master switch for the forwarding feature.                                                               |
+| `MAX_FORWARD_ADDRESSES`           | `4`                            | Forwarding destinations per mailbox (Dovecot's default `sieve_max_redirects` is 4; Mailcow allows 100). |
+| `MAIL_FORWARDING_ALLOWED_DOMAINS` | —                              | Optional allow-list of destination domains, e.g. `example.com,partner.example`.                         |
+| `MAX_ATTACHMENT_SIZE_MB`          | `50`                           | Per attachment upload limit. Match Mailcow's `message_size_limit`.                                      |
+| `MAX_MESSAGE_SIZE_MB`             | `60`                           | Largest message the viewer will download in full.                                                       |
+| `IMAP_POOL_SIZE`                  | `3`                            | IMAP connections per signed-in mailbox.                                                                 |
+| `IMAP_IDLE_TIMEOUT_SECONDS`       | `300`                          | Idle pooled connections are logged out after this.                                                      |
+| `DATABASE_PATH`                   | `./data/webmail.db`            | SQLite file for sessions, preferences, contacts, signatures.                                            |
+| `UPLOAD_DIR`                      | `./data/uploads`               | Temporary compose attachments (auto-cleaned).                                                           |
+| `LOG_LEVEL`                       | `info`                         | `trace` … `error`.                                                                                      |
+| `LOG_FORMAT`                      | `pretty` (dev) / `json` (prod) |                                                                                                         |
+| `MAIL_PROVIDER`                   | `imap`                         | `mock` is for tests only and refused in production.                                                     |
 
 ## Local development
 
@@ -150,12 +173,13 @@ the public hostname is recommended).
 
 No changes to Mailcow are required. The webmail uses the same endpoints as any mail client:
 
-| Purpose  | Setting                                                             |
-| -------- | ------------------------------------------------------------------- |
-| IMAP     | `mail.example.com`, port **993**, SSL/TLS (IMAPS)                   |
-| SMTP     | `mail.example.com`, port **587**, STARTTLS, authentication required |
-| Username | full mailbox address, e.g. `alice@example.com`                      |
-| Password | the mailbox password                                                |
+| Purpose  | Setting                                                                    |
+| -------- | -------------------------------------------------------------------------- |
+| IMAP     | `mail.example.com`, port **993**, SSL/TLS (IMAPS)                          |
+| SMTP     | `mail.example.com`, port **587**, STARTTLS, authentication required        |
+| Sieve    | `mail.example.com`, port **4190** (ManageSieve), STARTTLS — for forwarding |
+| Username | full mailbox address, e.g. `alice@example.com`                             |
+| Password | the mailbox password                                                       |
 
 Recommended:
 
@@ -168,7 +192,11 @@ Recommended:
 4. **Rate limits** — Mailcow's Postfix/Dovecot rate limits apply per mailbox as usual. The webmail additionally
    throttles logins per IP and per account.
 5. **App passwords** — if you use Mailcow app passwords, they work as long as they allow IMAP and SMTP.
-6. **Fail2ban / netfilter** — the webmail connects from its own IP; repeated bad passwords from users would count
+6. **ManageSieve (forwarding)** — Mailcow's Dovecot serves ManageSieve on port 4190 (published by
+   `docker-compose.yml`). Allow the webmail host to reach it; if it cannot, the Forwarding page says so and the rest of
+   the app is unaffected. Mailcow sets `sieve_redirect_envelope_from = recipient`, so forwarded mail is sent with the
+   mailbox's own address as envelope sender and passes SPF at the destination.
+7. **Fail2ban / netfilter** — the webmail connects from its own IP; repeated bad passwords from users would count
    against that IP in Mailcow's netfilter. Consider whitelisting the webmail host in Mailcow (Configuration → Fail2ban
    parameters → Whitelist) and rely on the webmail's own login throttling.
 
@@ -226,6 +254,11 @@ exercise the real Content-Security-Policy. See [docs/TESTING.md](docs/TESTING.md
 | Everyone signed out after deploy                                     | `SESSION_SECRET` changed — sessions cannot be decrypted with a new secret (by design).                                                                           |
 | Login returns 429                                                    | Login throttling (8 attempts / 15 min per IP, 12 per account). Wait or restart the app.                                                                          |
 | CSP errors in the console                                            | Something injects inline scripts (browser extension, Cloudflare Rocket Loader). The app uses nonces.                                                             |
+
+| Downloads fail / previews stay blank (older versions) | Fixed in 0.2: responses no longer advertise the base64-encoded size as `Content-Length`, and PDFs may be framed by the app itself (`X-Frame-Options: SAMEORIGIN` on attachments only). |
+| Forwarding page says the filter service can't be reached | Port 4190 blocked between webmail and Mailcow, or `MAIL_SIEVE_HOST` wrong. Diagnostics shows the ManageSieve status. |
+| Forwarding shows "another app activated a different filter" | SOGo/Roundcube activated its own Sieve script. Press Save: forwarding becomes active again and includes that script so its rules keep running. |
+| A mailbox in the switcher shows "Sign in again" | Its password changed in Mailcow. Choose it and enter the new password; the other mailboxes are unaffected. |
 
 Set `LOG_LEVEL=debug` for detailed server logs; passwords, tokens and cookies are always redacted.
 

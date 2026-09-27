@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { getActiveAccount } from '@/stores/account-store';
 
 let counter = 0;
 
@@ -8,6 +9,7 @@ let counter = 0;
  *
  * @typedef {Object} ComposeWindow
  * @property {string} id
+ * @property {string|null} account mailbox the message is written from (fixed for the window's life)
  * @property {'new'|'reply'|'replyAll'|'forward'|'draft'} mode
  * @property {boolean} minimized
  * @property {boolean} expanded
@@ -20,6 +22,7 @@ export const useComposeStore = create((set, get) => ({
     const id = `c${Date.now().toString(36)}${(counter++).toString(36)}`;
     const win = {
       id,
+      account: init.account || getActiveAccount(),
       mode: init.mode || 'new',
       minimized: false,
       expanded: false,
@@ -70,6 +73,9 @@ export const useComposeStore = create((set, get) => ({
     })),
 
   close: (id) => set((s) => ({ windows: s.windows.filter((w) => w.id !== id) })),
+  /** Drops the windows of a mailbox that was signed out. */
+  closeForAccount: (account) =>
+    set((s) => ({ windows: s.windows.filter((w) => w.account !== account) })),
   minimize: (id, minimized = true) => get().update(id, { minimized }),
   expand: (id, expanded) =>
     get().update(id, (w) => ({ expanded: expanded ?? !w.expanded, minimized: false })),

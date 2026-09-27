@@ -1,14 +1,15 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiDelete, apiGet, apiPatch, apiPost } from '@/utils/api-client';
+import { useApi } from '@/hooks/use-account';
 
 export const FOLDERS_KEY = ['folders'];
 
 export function useFolders() {
+  const api = useApi();
   return useQuery({
     queryKey: FOLDERS_KEY,
-    queryFn: () => apiGet('/api/folders'),
+    queryFn: () => api.get('/api/folders'),
     staleTime: 20_000,
     refetchInterval: 60_000,
   });
@@ -31,18 +32,19 @@ export function useResolvedFolder(route) {
 }
 
 export function useFolderMutations() {
+  const api = useApi();
   const queryClient = useQueryClient();
   const invalidate = () => queryClient.invalidateQueries({ queryKey: FOLDERS_KEY });
   const create = useMutation({
-    mutationFn: (input) => apiPost('/api/folders', input),
+    mutationFn: (input) => api.post('/api/folders', input),
     onSuccess: invalidate,
   });
   const rename = useMutation({
-    mutationFn: (input) => apiPatch('/api/folders', input),
+    mutationFn: (input) => api.patch('/api/folders', input),
     onSuccess: invalidate,
   });
   const remove = useMutation({
-    mutationFn: (input) => apiDelete('/api/folders', input),
+    mutationFn: (input) => api.delete('/api/folders', input),
     onSuccess: invalidate,
   });
   return { create, rename, remove };

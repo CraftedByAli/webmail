@@ -76,6 +76,17 @@ A Google Workspace or Microsoft 365 provider would implement the same class; rou
 
 Neither the database alone nor the cookie alone can recover a password.
 
+### Multiple mailboxes per session
+
+A session holds one or more rows in `session_accounts` (`session_id`, `email`, `encrypted_secret`, `position`). The
+first login creates the session; `POST /api/auth/accounts` (or signing in again on the login page) adds more mailboxes
+to it. `createHandler` resolves the mailbox for each request from `X-Mailbox` / `?account=` (falling back to the
+`wm_account` last-used hint), and everything downstream (`session.email`, `session.credentials`, preferences, contacts,
+signatures, IMAP pools, caches) is keyed by that mailbox. In the browser, `AccountProvider` owns the mailbox list and
+realtime; `AccountScope` gives the active mailbox its own QueryClient and an `AccountContext` that `useApi()` binds
+requests to. Compose windows render in the scope of the mailbox they were opened from, so a draft keeps sending from
+its own mailbox while the user switches.
+
 ## IMAP connection management
 
 - **Pool per mailbox** (`ImapConnectionManager`): up to `IMAP_POOL_SIZE` authenticated connections, reused across
@@ -129,9 +140,16 @@ attachments (referenced by part).
 cached 30 s and paged with UID FETCH. Replacing IMAP SEARCH with an index (Meilisearch, OpenSearch, PostgreSQL FTS) means
 adding another compiler for the same AST.
 
+## Forwarding
+
+`lib/sieve/managesieve.js` is a small RFC 5804 client (STARTTLS, SASL PLAIN, LISTSCRIPTS/GETSCRIPT/PUTSCRIPT/
+SETACTIVE). `lib/sieve/forwarding-script.js` generates and parses the `osmicmails-forwarding` script;
+`lib/forwarding/service.js` applies settings while preserving any previously active script via `include`.
+
 ## Real-time
 
-Dovecot `EXISTS`/`EXPUNGE`/`FETCH FLAGS` → `IdleManager` → `realtimeHub` → `GET /api/realtime` (SSE, 25 s heartbeats)
+One SSE stream per tab carries events for every mailbox of the session, each tagged with `account`; the client only
+invalidates that mailbox's cache and refreshes the switcher's unread counts. Dovecot `EXISTS`/`EXPUNGE`/`FETCH FLAGS` → `IdleManager` → `realtimeHub` → `GET /api/realtime` (SSE, 25 s heartbeats)
 → `useRealtime()` invalidates TanStack Query caches and shows toasts/desktop notifications. If SSE fails the hook
 falls back to 60 s polling and refreshes on tab focus.
 
@@ -142,7 +160,7 @@ All mailbox caches for a folder are invalidated after read/unread, move, delete,
 
 ## Database
 
-SQLite tables: `sessions`, `user_preferences`, `signatures`, `contacts`, `address_suggestions`, `login_history`,
+SQLite tables: `sessions`, `session_accounts`, `user_preferences`, `signatures`, `contacts`, `address_suggestions`, `login_history`,
 `schema_migrations`. No mail data is stored. Deleting the file loses only preferences and sessions.
 
 ## Deployment shape

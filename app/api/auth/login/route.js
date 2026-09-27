@@ -2,8 +2,18 @@ import { NextResponse } from 'next/server';
 import { createHandler, readJson } from '@/lib/api/handler';
 import { errors } from '@/lib/api/errors';
 import { authenticateMailbox } from '@/lib/mail';
-import { createSession, recordLogin, pruneSessions } from '@/lib/auth/session';
-import { serializeSessionCookie } from '@/lib/auth/cookies';
+import {
+  addSessionAccount,
+  createSession,
+  pruneSessions,
+  recordLogin,
+  resolveSession,
+} from '@/lib/auth/session';
+import {
+  readSessionToken,
+  serializeAccountCookie,
+  serializeSessionCookie,
+} from '@/lib/auth/cookies';
 import { checkRateLimit, resetRateLimit, RATE_LIMITS } from '@/lib/security/rate-limit';
 import { isValidEmail } from '@/lib/mime/address';
 import { logger } from '@/lib/logger';
@@ -14,6 +24,9 @@ import { logger } from '@/lib/logger';
  *
  * Verifies the Mailcow mailbox credentials over IMAP and establishes an
  * HTTP-only cookie session. The password is never returned to the client.
+ *
+ * If the browser already holds a valid session, the mailbox is added to it
+ * instead, so signing in to a second mailbox never signs out the first.
  */
 export const POST = createHandler(
   async ({ request, ip }) => {
@@ -45,6 +58,27 @@ export const POST = createHandler(
     resetRateLimit(`login:${ip}`);
     pruneSessions();
 
+    const existing = resolveSession(readSessionToken(request));
+    if (existing) {
+      try {
+        const result = addSessionAccount(existing, { email, password });
+        logger.info(
+          { operation: 'auth.login', mailbox: email, ip, success: true, sessionId: existing.id },
+          'mailbox added to existing session'
+        );
+        const response = NextResponse.json({
+          user: { email },
+          session: { id: existing.id, expiresAt: existing.expiresAt },
+          accounts: result.accounts.map((a) => a.email),
+        });
+        response.headers.append('Set-Cookie', serializeAccountCookie(email));
+        return response;
+      } catch (error) {
+        if (error?.code !== 'ACCOUNT_LIMIT') throw error;
+        // Full session: fall through and start a fresh one for this mailbox.
+      }
+    }
+
     const { token, session } = createSession({ email, password, userAgent, ip });
     logger.info(
       { operation: 'auth.login', mailbox: email, ip, success: true, sessionId: session.id },
@@ -56,6 +90,7 @@ export const POST = createHandler(
       session: { id: session.id, expiresAt: session.expiresAt },
     });
     response.headers.append('Set-Cookie', serializeSessionCookie(token));
+    response.headers.append('Set-Cookie', serializeAccountCookie(email));
     return response;
   },
   { auth: false, rateLimit: 'login' }

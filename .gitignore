@@ -8,6 +8,7 @@ test-results
 data/*.db
 data/*.db-*
 data/uploads
+data/*-uploads
 .env
 .env.local
 .env.*.local

@@ -8,15 +8,50 @@ import { Sidebar } from '@/components/sidebar/sidebar';
 import { ComposeManager } from '@/components/compose/compose-manager';
 import { ShortcutsDialog } from '@/components/layout/shortcuts-dialog';
 import { useSession } from '@/hooks/use-session';
-import { useRealtime } from '@/hooks/use-realtime';
+import { AccountProvider, AccountScope } from '@/components/layout/account-provider';
+import { AddMailboxDialog } from '@/components/layout/account-switcher';
+import { useAccountActions } from '@/hooks/use-accounts';
+import { useAccountStore } from '@/stores/account-store';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { useComposeStore } from '@/stores/compose-store';
 import { useUiStore } from '@/stores/ui-store';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { cn } from '@/utils/cn';
 
-export function AppShell({ user, children }) {
+export function AppShell({ user, accounts, maxAccounts, children }) {
+  return (
+    <AccountProvider
+      accounts={accounts || [{ email: user.email, isAdmin: user.isAdmin }]}
+      initialActive={user.email}
+      maxAccounts={maxAccounts}
+    >
+      <ShellFrame>{children}</ShellFrame>
+    </AccountProvider>
+  );
+}
+
+function ShellFrame({ children }) {
+  const active = useAccountStore((s) => s.active);
+  const accounts = useAccountStore((s) => s.accounts);
+  const account = accounts.find((a) => a.email === active) || accounts[0];
+  if (!account) return null;
+  return (
+    <>
+      <AccountScope key={account.email} account={account.email}>
+        <MailboxShell user={{ email: account.email, isAdmin: !!account.isAdmin }}>
+          {children}
+        </MailboxShell>
+      </AccountScope>
+      {/* Outside the mailbox scope: each draft stays bound to its own mailbox. */}
+      <ComposeManager />
+      <AddMailboxDialog />
+    </>
+  );
+}
+
+function MailboxShell({ user, children }) {
   const { data: session } = useSession();
+  const { switchTo } = useAccountActions();
   const preferences = session?.preferences;
   const router = useRouter();
   const pathname = usePathname();
@@ -35,8 +70,6 @@ export function AppShell({ user, children }) {
     setSidebarOpen(false);
   }, [pathname, setSidebarOpen]);
 
-  useRealtime({ enabled: !!session, preferences });
-
   const shortcutsEnabled = preferences?.shortcuts?.enabled !== false;
   const globalShortcuts = useMemo(
     () => ({
@@ -47,8 +80,12 @@ export function AppShell({ user, children }) {
       goDrafts: () => router.push('/mail/drafts'),
       search: () => document.getElementById('global-search')?.focus(),
       help: () => useUiStore.setState({ helpOpen: true }),
+      switchMailbox: (n) => {
+        const target = useAccountStore.getState().accounts[n - 1];
+        if (target) switchTo(target.email);
+      },
     }),
-    [openCompose, router]
+    [openCompose, router, switchTo]
   );
   useKeyboardShortcuts(globalShortcuts, { enabled: shortcutsEnabled });
 
@@ -101,7 +138,6 @@ export function AppShell({ user, children }) {
         </main>
       </div>
 
-      <ComposeManager />
       <ShortcutsDialog
         open={helpOpen}
         onOpenChange={(open) => useUiStore.setState({ helpOpen: open })}

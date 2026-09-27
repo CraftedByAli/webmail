@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 262 64" role="img" aria-label="OsmicMails">
+  <defs>
+    <linearGradient id="om-bg" x1="6" y1="4" x2="58" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5B3DF5"/>
+      <stop offset="0.55" stop-color="#3B5BDB"/>
+      <stop offset="1" stop-color="#0EA5C6"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#om-bg)"/>
+  <path d="M48.42 27.6A17 17 0 1 1 36.4 15.58" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
+  <rect x="22.25" y="25" width="19.5" height="14" rx="3" fill="#fff" fill-opacity="0.16" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
+  <path d="m23.5 27 8.5 6 8.5-6" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="44.02" cy="19.98" r="3.6" fill="#FFD166"/>
+  <text x="80" y="43" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="32" font-weight="700" letter-spacing="-0.8" fill="#F9FAFB">Osmic<tspan fill="#7C9CFF">Mails</tspan></text>
+</svg>

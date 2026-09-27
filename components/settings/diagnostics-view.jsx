@@ -8,17 +8,18 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState } from '@/components/ui/error-state';
 import { Badge } from '@/components/ui/badge';
-import { apiGet } from '@/utils/api-client';
+import { useApi } from '@/hooks/use-account';
 
 /**
  * Operator view. Dense on purpose: whoever opens this is diagnosing a problem
  * and wants every value visible at once, aligned and comparable.
  */
 export function DiagnosticsView() {
+  const api = useApi();
   const router = useRouter();
   const diag = useQuery({
     queryKey: ['diagnostics'],
-    queryFn: () => apiGet('/api/admin/diagnostics'),
+    queryFn: () => api.get('/api/admin/diagnostics'),
     refetchInterval: 30_000,
   });
   const d = diag.data;
@@ -94,6 +95,20 @@ export function DiagnosticsView() {
                   <Row k="SMTP error" v={<span className="text-danger">{d.smtp.error}</span>} />
                 ) : null}
               </Group>
+
+              {d.sieve ? (
+                <Group title="ManageSieve (forwarding)">
+                  <Row k="Status" v={d.sieve.disabled ? 'Disabled' : <Status ok={d.sieve.ok} />} />
+                  <Row k="Server" v={`${d.sieve.host}:${d.sieve.port}`} />
+                  <Row
+                    k="Latency"
+                    v={d.sieve.latencyMs != null ? `${d.sieve.latencyMs} ms` : '—'}
+                  />
+                  {d.sieve.error ? (
+                    <Row k="Error" v={<span className="text-danger">{d.sieve.error}</span>} />
+                  ) : null}
+                </Group>
+              ) : null}
 
               <Group title="Connections">
                 <Row

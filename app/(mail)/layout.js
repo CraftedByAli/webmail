@@ -12,12 +12,21 @@ export const dynamic = 'force-dynamic';
  */
 export default async function MailLayout({ children }) {
   const { session: sessionConfig, app } = getConfig();
-  const token = (await cookies()).get(sessionConfig.cookieName)?.value;
-  const session = resolveSession(token);
+  const jar = await cookies();
+  const session = resolveSession(jar.get(sessionConfig.cookieName)?.value, {
+    preferred: jar.get(sessionConfig.accountCookieName)?.value || null,
+  });
   if (!session) redirect('/login?reason=expired');
 
   return (
-    <AppShell user={{ email: session.email, isAdmin: app.adminEmails.includes(session.email) }}>
+    <AppShell
+      user={{ email: session.email, isAdmin: app.adminEmails.includes(session.email) }}
+      accounts={session.accounts.map((a) => ({
+        email: a.email,
+        isAdmin: app.adminEmails.includes(a.email),
+      }))}
+      maxAccounts={sessionConfig.maxAccounts}
+    >
       {children}
     </AppShell>
   );
