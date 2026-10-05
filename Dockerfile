@@ -3,7 +3,7 @@
 # ---------------------------------------------------------------------------
 # Build stage
 # ---------------------------------------------------------------------------
-FROM node:24-bookworm-slim AS builder
+FROM node:26-bookworm-slim AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 # better-sqlite3 ships prebuilt binaries for linux x64/arm64 glibc; python and
@@ -19,7 +19,7 @@ RUN npm run build
 # ---------------------------------------------------------------------------
 # Runtime stage (standalone output, non-root, small)
 # ---------------------------------------------------------------------------
-FROM node:24-bookworm-slim AS runner
+FROM node:26-bookworm-slim AS runner
 WORKDIR /app
 # Set by the release workflow; shown in Settings → About and diagnostics.
 ARG APP_VERSION=dev
