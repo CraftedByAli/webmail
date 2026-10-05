@@ -1,0 +1,63 @@
+# OsmicMails as an add-on to mailcow: dockerized.
+#
+# Runs as its own Compose project (so mailcow's update.sh never touches it)
+# and joins mailcow's internal network. Mail traffic stays on the host:
+#
+#   browser ─HTTPS─▶ nginx-mailcow ─▶ osmicmails-mailcow:3000
+#                                        ├─ IMAPS 993  ─▶ dovecot-mailcow
+#                                        ├─ SMTP 587   ─▶ postfix-mailcow
+#                                        └─ Sieve 4190 ─▶ dovecot-mailcow
+#
+# Use install.sh, or see https://<your-webmail>/docs/mailcow for the manual steps.
+
+name: osmicmails
+
+services:
+  osmicmails:
+    image: ${OSMICMAILS_IMAGE:-ghcr.io/craftedbyali/osmicmails:latest}
+    build:
+      context: ../..
+    container_name: osmicmails-mailcow
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      DATABASE_PATH: /data/webmail.db
+      UPLOAD_DIR: /data/uploads
+    # Loopback only. nginx-mailcow reaches the app over the mailcow network;
+    # this port exists for health checks and for setups that put their own
+    # reverse proxy in front of mailcow instead.
+    ports:
+      - '${OSMICMAILS_BIND:-127.0.0.1:3004}:3000'
+    volumes:
+      - osmicmails-data:/data
+    networks:
+      mailcow:
+        aliases:
+          - osmicmails
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/.next/cache
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+    logging:
+      driver: json-file
+      options:
+        max-size: '20m'
+        max-file: '5'
+
+networks:
+  mailcow:
+    external: true
+    # <COMPOSE_PROJECT_NAME from mailcow.conf>_mailcow-network
+    name: ${MAILCOW_NETWORK:-mailcowdockerized_mailcow-network}
+
+volumes:
+  osmicmails-data:

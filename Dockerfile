@@ -21,7 +21,10 @@ RUN npm run build
 # ---------------------------------------------------------------------------
 FROM node:24-bookworm-slim AS runner
 WORKDIR /app
-ENV NODE_ENV=production \
+# Set by the release workflow; shown in Settings → About and diagnostics.
+ARG APP_VERSION=dev
+ENV APP_VERSION=${APP_VERSION} \
+    NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME=0.0.0.0 \

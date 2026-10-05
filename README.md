@@ -51,11 +51,38 @@ Browser ──HTTPS──▶ Next.js (Node) ──IMAPS 993──▶ Dovecot (Ma
 - **Security**: HttpOnly/Secure/SameSite cookies, encrypted credential storage, CSRF protection, strict CSP with
   nonces, rate limiting and login throttling, attachment validation by magic bytes, filename sanitization, no
   arbitrary IMAP/SMTP/URL access. See [docs/SECURITY.md](docs/SECURITY.md).
-- **Tests**: 110 unit, 36 integration and 16 Playwright end-to-end tests run against an in-memory mock mail
+- **Tests**: 123 unit, 36 integration and 20 Playwright end-to-end tests run against an in-memory mock mail
   provider — CI needs no Mailcow. An optional live suite runs against a real mailbox.
+
+## Use it with Mailcow (replace SOGo)
+
+On a server running mailcow: dockerized, one installer adds OsmicMails on Mailcow's internal network, serves it through
+Mailcow's own nginx and certificate at its own hostname, and redirects SOGo's webmail to it (SOGo's CalDAV/CardDAV and
+ActiveSync keep working):
+
+```bash
+git clone https://github.com/CraftedByAli/webmail.git /opt/osmicmails
+cd /opt/osmicmails/deploy/mailcow
+sudo ./install.sh
+```
+
+Nothing in Mailcow changes without a prompt, and nginx is only restarted after `nginx -t` accepts the configuration.
+The full guide — including the manual steps, removing SOGo entirely and running behind another proxy — is served by
+every instance at **`/docs/mailcow`**. Release images: `ghcr.io/craftedbyali/osmicmails` (amd64 + arm64, with signed
+build provenance).
+
+Each organisation runs its own copy against its own mail server. There is deliberately no shared login that accepts
+arbitrary servers: mailbox passwords should only ever reach a server you control.
+
+## Documentation
+
+Every instance serves its documentation at `/docs` (turn off with `DOCS_ENABLED=false`): introduction, quick start,
+Mailcow integration, standalone Docker, reverse proxies, configuration reference, security, operations and
+troubleshooting.
 
 ## Table of contents
 
+- [Use it with Mailcow (replace SOGo)](#use-it-with-mailcow-replace-sogo)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Environment variables](#environment-variables)
@@ -98,37 +125,41 @@ MAIL_USER=you@example.com MAIL_PASS='your-password' npm run check:mailcow
 
 All configuration comes from the environment (see [`.env.example`](.env.example)). Nothing is hard-coded.
 
-| Variable                          | Default                        | Description                                                                                             |
-| --------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| `APP_URL`                         | `http://localhost:3000`        | Public URL. `https://` enables Secure cookies and HTTPS redirects.                                      |
-| `SESSION_SECRET`                  | —                              | **Required in production**, ≥ 32 random characters. Used for cookie hashing and credential encryption.  |
-| `SESSION_TTL_HOURS`               | `168`                          | Sliding session lifetime.                                                                               |
-| `ADMIN_EMAILS`                    | —                              | Comma-separated mailboxes allowed to open `/admin/diagnostics`.                                         |
-| `MAX_MAILBOXES_PER_SESSION`       | `10`                           | How many mailboxes one browser may be signed in to at once (1–20).                                      |
-| `MAIL_IMAP_HOST`                  | —                              | **Required.** Mailcow hostname (e.g. `mail.example.com`).                                               |
-| `MAIL_IMAP_PORT`                  | `993`                          |                                                                                                         |
-| `MAIL_IMAP_TLS`                   | `true`                         | `true` = IMAPS, `false` = plain + STARTTLS (port 143).                                                  |
-| `MAIL_SMTP_HOST`                  | —                              | **Required.** Usually the same host.                                                                    |
-| `MAIL_SMTP_PORT`                  | `587`                          |                                                                                                         |
-| `MAIL_SMTP_SECURE`                | `false`                        | `true` for implicit TLS on 465.                                                                         |
-| `MAIL_SMTP_REQUIRE_TLS`           | `true`                         | Refuse to authenticate without STARTTLS.                                                                |
-| `MAIL_TLS_REJECT_UNAUTHORIZED`    | `true`                         | Only set `false` for self-signed certificates in a lab.                                                 |
-| `MAIL_SIEVE_ENABLED`              | `true`                         | Use ManageSieve (Dovecot) for forwarding.                                                               |
-| `MAIL_SIEVE_HOST`                 | `MAIL_IMAP_HOST`               | ManageSieve host.                                                                                       |
-| `MAIL_SIEVE_PORT`                 | `4190`                         | Mailcow publishes ManageSieve on 4190.                                                                  |
-| `MAIL_SIEVE_REQUIRE_TLS`          | `true`                         | Require STARTTLS before sending the password.                                                           |
-| `MAIL_FORWARDING_ENABLED`         | `true`                         | Master switch for the forwarding feature.                                                               |
-| `MAX_FORWARD_ADDRESSES`           | `4`                            | Forwarding destinations per mailbox (Dovecot's default `sieve_max_redirects` is 4; Mailcow allows 100). |
-| `MAIL_FORWARDING_ALLOWED_DOMAINS` | —                              | Optional allow-list of destination domains, e.g. `example.com,partner.example`.                         |
-| `MAX_ATTACHMENT_SIZE_MB`          | `50`                           | Per attachment upload limit. Match Mailcow's `message_size_limit`.                                      |
-| `MAX_MESSAGE_SIZE_MB`             | `60`                           | Largest message the viewer will download in full.                                                       |
-| `IMAP_POOL_SIZE`                  | `3`                            | IMAP connections per signed-in mailbox.                                                                 |
-| `IMAP_IDLE_TIMEOUT_SECONDS`       | `300`                          | Idle pooled connections are logged out after this.                                                      |
-| `DATABASE_PATH`                   | `./data/webmail.db`            | SQLite file for sessions, preferences, contacts, signatures.                                            |
-| `UPLOAD_DIR`                      | `./data/uploads`               | Temporary compose attachments (auto-cleaned).                                                           |
-| `LOG_LEVEL`                       | `info`                         | `trace` … `error`.                                                                                      |
-| `LOG_FORMAT`                      | `pretty` (dev) / `json` (prod) |                                                                                                         |
-| `MAIL_PROVIDER`                   | `imap`                         | `mock` is for tests only and refused in production.                                                     |
+| Variable                          | Default                        | Description                                                                                                   |
+| --------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `APP_URL`                         | `http://localhost:3000`        | Public URL. `https://` enables Secure cookies and HTTPS redirects.                                            |
+| `SESSION_SECRET`                  | —                              | **Required in production**, ≥ 32 random characters. Used for cookie hashing and credential encryption.        |
+| `SESSION_TTL_HOURS`               | `168`                          | Sliding session lifetime.                                                                                     |
+| `ADMIN_EMAILS`                    | —                              | Comma-separated mailboxes allowed to open `/admin/diagnostics`.                                               |
+| `MAX_MAILBOXES_PER_SESSION`       | `10`                           | How many mailboxes one browser may be signed in to at once (1–20).                                            |
+| `MAIL_IMAP_HOST`                  | —                              | **Required.** Mailcow hostname (e.g. `mail.example.com`).                                                     |
+| `MAIL_IMAP_PORT`                  | `993`                          |                                                                                                               |
+| `MAIL_IMAP_TLS`                   | `true`                         | `true` = IMAPS, `false` = plain + STARTTLS (port 143).                                                        |
+| `MAIL_SMTP_HOST`                  | —                              | **Required.** Usually the same host.                                                                          |
+| `MAIL_SMTP_PORT`                  | `587`                          |                                                                                                               |
+| `MAIL_SMTP_SECURE`                | `false`                        | `true` for implicit TLS on 465.                                                                               |
+| `MAIL_SMTP_REQUIRE_TLS`           | `true`                         | Refuse to authenticate without STARTTLS.                                                                      |
+| `MAIL_TLS_REJECT_UNAUTHORIZED`    | `true`                         | Only set `false` for self-signed certificates in a lab.                                                       |
+| `MAIL_TLS_SERVERNAME`             | —                              | Certificate name to verify when the hosts are internal (e.g. `dovecot-mailcow`); set to the Mailcow hostname. |
+| `TRUST_PROXY_HOPS`                | `1`                            | Proxies that append to `X-Forwarded-For`; the client IP is read that many entries from the right.             |
+| `TRUST_CLOUDFLARE`                | `false`                        | Trust `CF-Connecting-IP`. Only when the origin accepts Cloudflare traffic alone.                              |
+| `DOCS_ENABLED`                    | `true`                         | Serve the documentation at `/docs`.                                                                           |
+| `MAIL_SIEVE_ENABLED`              | `true`                         | Use ManageSieve (Dovecot) for forwarding.                                                                     |
+| `MAIL_SIEVE_HOST`                 | `MAIL_IMAP_HOST`               | ManageSieve host.                                                                                             |
+| `MAIL_SIEVE_PORT`                 | `4190`                         | Mailcow publishes ManageSieve on 4190.                                                                        |
+| `MAIL_SIEVE_REQUIRE_TLS`          | `true`                         | Require STARTTLS before sending the password.                                                                 |
+| `MAIL_FORWARDING_ENABLED`         | `true`                         | Master switch for the forwarding feature.                                                                     |
+| `MAX_FORWARD_ADDRESSES`           | `4`                            | Forwarding destinations per mailbox (Dovecot's default `sieve_max_redirects` is 4; Mailcow allows 100).       |
+| `MAIL_FORWARDING_ALLOWED_DOMAINS` | —                              | Optional allow-list of destination domains, e.g. `example.com,partner.example`.                               |
+| `MAX_ATTACHMENT_SIZE_MB`          | `50`                           | Per attachment upload limit. Match Mailcow's `message_size_limit`.                                            |
+| `MAX_MESSAGE_SIZE_MB`             | `60`                           | Largest message the viewer downloads in full, and the cap on an outgoing message's attachments.               |
+| `IMAP_POOL_SIZE`                  | `3`                            | IMAP connections per signed-in mailbox.                                                                       |
+| `IMAP_IDLE_TIMEOUT_SECONDS`       | `300`                          | Idle pooled connections are logged out after this.                                                            |
+| `DATABASE_PATH`                   | `./data/webmail.db`            | SQLite file for sessions, preferences, contacts, signatures.                                                  |
+| `UPLOAD_DIR`                      | `./data/uploads`               | Temporary compose attachments (auto-cleaned).                                                                 |
+| `LOG_LEVEL`                       | `info`                         | `trace` … `error`.                                                                                            |
+| `LOG_FORMAT`                      | `pretty` (dev) / `json` (prod) |                                                                                                               |
+| `MAIL_PROVIDER`                   | `imap`                         | `mock` is for tests only and refused in production.                                                           |
 
 ## Local development
 
@@ -289,4 +320,5 @@ management, threading strategy, real-time pipeline and caching.
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE). Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). Report security issues
+privately as described in [SECURITY.md](SECURITY.md).

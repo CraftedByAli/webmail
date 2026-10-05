@@ -10,7 +10,8 @@ import { NextResponse } from 'next/server';
  */
 
 const COOKIE = 'wm_session';
-const PUBLIC_PATHS = ['/login'];
+// /docs is public documentation; it hides itself when DOCS_ENABLED=false.
+const PUBLIC_PATHS = ['/login', '/docs'];
 
 function buildCsp(nonce, isDev) {
   return [

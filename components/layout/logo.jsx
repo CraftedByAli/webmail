@@ -60,7 +60,7 @@ export function LogoMark({ className, title }) {
 }
 
 /** Mark + wordmark. */
-export function Logo({ className, showText = true, size = 'md' }) {
+export function Logo({ className, textClassName, showText = true, size = 'md' }) {
   return (
     <span className={cn('inline-flex items-center gap-2', className)}>
       <LogoMark className={size === 'lg' ? 'size-9' : 'size-7'} />
@@ -68,7 +68,8 @@ export function Logo({ className, showText = true, size = 'md' }) {
         <span
           className={cn(
             'text-fg font-bold tracking-tight',
-            size === 'lg' ? 'text-[1.375rem] leading-none' : 'text-body'
+            size === 'lg' ? 'text-[1.375rem] leading-none' : 'text-body',
+            textClassName
           )}
         >
           Osmic<span className="text-accent-text">Mails</span>

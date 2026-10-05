@@ -2,6 +2,9 @@
 
 The webmail is a regular IMAP/SMTP client; Mailcow needs no changes. These notes cover the details worth knowing.
 
+To install OsmicMails on a Mailcow host and replace SOGo's webmail, use `deploy/mailcow/install.sh`; the step-by-step
+guide (also the manual equivalent) is served at `/docs/mailcow` by every instance.
+
 ## Endpoints
 
 | Service         | Host                                            | Port | TLS                  | Auth                            |
@@ -29,15 +32,20 @@ Run `MAIL_USER=… MAIL_PASS=… npm run check:mailcow` to print the capabilitie
 
 ## Same-host Docker networking
 
-If the webmail container runs on the Mailcow host, you can join `mailcowdockerized_mailcow-network` and use
-`dovecot-mailcow` / `postfix-mailcow` as hosts, but the TLS certificate will not match those names. Prefer the public
-hostname (traffic stays local via hairpin NAT / DNS), or set `MAIL_TLS_REJECT_UNAUTHORIZED=false` only in a private lab.
+If the webmail container runs on the Mailcow host, join `mailcowdockerized_mailcow-network` and use
+`dovecot-mailcow` / `postfix-mailcow` as hosts. Their names are not on Mailcow's certificate, so set
+`MAIL_TLS_SERVERNAME` to `MAILCOW_HOSTNAME`: the connection goes to the container while the certificate is still
+verified against the public name. Never disable verification (`MAIL_TLS_REJECT_UNAUTHORIZED=false`) on a real server.
+`deploy/mailcow/` does all of this.
 
 ## Netfilter / Fail2ban
 
 Mailcow bans IPs after repeated authentication failures. All webmail users share the webmail host's IP, so a few users
 mistyping passwords could ban the whole webmail. The webmail throttles logins itself (8 per IP and 12 per account per
-15 minutes). Whitelist the webmail host in Mailcow: **System → Configuration → Fail2ban parameters → Whitelist**.
+15 minutes). When it runs on another host, whitelist it in Mailcow: **System → Configuration → Fail2ban parameters →
+Whitelist**. On the Mailcow network it connects from a private address, which Mailcow's netfilter never bans — the
+webmail's own throttling is then the only guard, so keep `TRUST_PROXY_HOPS` correct (the client IP must not be
+spoofable).
 
 ## Size limits
 

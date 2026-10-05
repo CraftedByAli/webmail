@@ -428,6 +428,35 @@
   color: hsl(var(--text-secondary));
 }
 
+/* iOS Safari zooms the whole page when a focused field's text is smaller than
+   16px, and does not zoom back out. Touch devices get 16px fields instead of
+   disabling zoom (maximum-scale=1 would also block pinch-zoom on Android, an
+   accessibility regression). Unlayered, so it beats the text-* utilities. */
+@media (pointer: coarse) {
+  input:not([type='checkbox'], [type='radio'], [type='range'], [type='color'], [type='file']),
+  select,
+  textarea,
+  .editor-content,
+  [contenteditable='true'] {
+    font-size: 16px;
+  }
+}
+
+/* Horizontal tool strips on phones: scroll instead of wrapping onto a second
+   line, without a visible scrollbar. */
+@utility scroll-strip {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
 /* Sanitized HTML rendered directly in the app (signature previews). */
 .prose-app {
   font-size: var(--text-body);
