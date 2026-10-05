@@ -2,6 +2,12 @@
 
 # OsmicMails
 
+[![CI](https://github.com/CraftedByAli/webmail/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/CraftedByAli/webmail/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/CraftedByAli/webmail?style=social)](https://github.com/CraftedByAli/webmail/stargazers)
+
+> ⭐ **If OsmicMails is useful to you, please star the repository** — it helps other Mailcow admins find it.
+
 **OsmicMails** is a production-grade, Gmail-style business webmail for an existing **Mailcow** installation — built
 for companies that run several mailboxes per domain (`info@`, `sales@`, `support@` …) and want to work in all of them
 from one screen.
@@ -80,9 +86,44 @@ Every instance serves its documentation at `/docs` (turn off with `DOCS_ENABLED=
 Mailcow integration, standalone Docker, reverse proxies, configuration reference, security, operations and
 troubleshooting.
 
+## Contributing
+
+Contributions are welcome — bug fixes, features and docs. The short version:
+
+```
+fork ─▶ branch from staging ─▶ PR into staging ─▶ review + CI ─▶ maintainer merges
+                                                 staging ─▶ main (maintainer only) ─▶ release
+```
+
+1. **Fork** the repository and clone your fork.
+2. **Create a branch from `staging`**: `git switch -c feat/my-change upstream/staging`.
+3. **Set up locally** with no mail server needed: `npm ci`, `cp .env.example .env`, set `MAIL_PROVIDER=mock`,
+   `npm run dev`, sign in as `test@example.com` / `password123`.
+4. **Run the checks**: `npm run lint && npm run format:check && npm test && npm run test:integration` (and
+   `npm run test:e2e` for UI changes).
+5. **Open a pull request with base `staging`** and fill in the template.
+
+How the branches are protected:
+
+| Branch      | Purpose                   | Merges                                                                   |
+| ----------- | ------------------------- | ------------------------------------------------------------------------ |
+| `main`      | Released code             | Maintainer only, by pull request from `staging` (merge commit), CI green |
+| `staging`   | Next release, integration | Maintainer only, by pull request after review, CI green                  |
+| your branch | One change, in your fork  | You                                                                      |
+
+Nobody — including admins — pushes directly to `main` or `staging`. A pull request into `main` from any branch other
+than `staging` fails the required _Source branch is staging_ check. Full details: [CONTRIBUTING.md](CONTRIBUTING.md).
+Found a security issue? Please report it privately — see [SECURITY.md](SECURITY.md).
+
+## Support the project
+
+If OsmicMails saves you from SOGo or makes your users happier, **[give it a ⭐ on GitHub](https://github.com/CraftedByAli/webmail)**.
+Stars, bug reports and pull requests all help the project grow.
+
 ## Table of contents
 
 - [Use it with Mailcow (replace SOGo)](#use-it-with-mailcow-replace-sogo)
+- [Contributing](#contributing)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Environment variables](#environment-variables)
