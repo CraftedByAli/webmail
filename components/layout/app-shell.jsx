@@ -118,7 +118,7 @@ function MailboxShell({ user, children }) {
             ) : null}
             <aside
               className={cn(
-                'border-line bg-canvas fixed inset-y-0 left-0 z-[46] w-[17rem] max-w-[85vw] transform border-r transition-transform duration-200 ease-out',
+                'border-line bg-canvas safe-top safe-bottom fixed inset-y-0 left-0 z-[46] w-[17rem] max-w-[85vw] transform border-r transition-transform duration-200 ease-out',
                 sidebarOpen ? 'translate-x-0' : '-translate-x-full'
               )}
               aria-hidden={!sidebarOpen}

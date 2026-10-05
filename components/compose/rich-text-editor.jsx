@@ -157,11 +157,11 @@ export function RichTextEditor({ initialHtml, onChange, placeholder, autoFocus, 
       <div
         role="toolbar"
         aria-label="Text formatting"
-        className="border-line mb-3 flex flex-wrap items-center gap-px border-b pb-2"
+        className="border-line scroll-strip mb-3 flex items-center gap-px border-b pb-2 sm:flex-wrap"
       >
         {tools.map((t, i) =>
           t.divider ? (
-            <span key={`d${i}`} aria-hidden="true" className="bg-line mx-1 h-4 w-px" />
+            <span key={`d${i}`} aria-hidden="true" className="bg-line mx-1 h-4 w-px shrink-0" />
           ) : (
             <button
               key={t.label}
@@ -172,7 +172,7 @@ export function RichTextEditor({ initialHtml, onChange, placeholder, autoFocus, 
               onMouseDown={(e) => e.preventDefault()}
               onClick={t.run}
               className={cn(
-                'text-fg-secondary rounded-control grid size-7 place-items-center transition-colors duration-100',
+                'text-fg-secondary rounded-control grid size-9 shrink-0 place-items-center transition-colors duration-100 sm:size-7',
                 'hover:bg-hover hover:text-fg focus-visible:outline-focus focus-visible:outline-2 focus-visible:outline-offset-1',
                 t.active && 'bg-hover text-fg'
               )}
@@ -181,7 +181,7 @@ export function RichTextEditor({ initialHtml, onChange, placeholder, autoFocus, 
             </button>
           )
         )}
-        <label className="hover:bg-hover rounded-control ml-1 grid size-7 cursor-pointer place-items-center">
+        <label className="hover:bg-hover rounded-control ml-1 grid size-9 shrink-0 cursor-pointer place-items-center sm:size-7">
           <span className="sr-only">Text colour</span>
           <input
             type="color"

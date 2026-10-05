@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Pencil } from 'lucide-react';
 import { MailToolbar } from '@/components/mail/mail-toolbar';
 import { MailRow } from '@/components/mail/mail-row';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -18,6 +18,7 @@ import { useUiStore } from '@/stores/ui-store';
 import { useComposeStore } from '@/stores/compose-store';
 import { threadHref, messageHref } from '@/utils/mail-routes';
 import { useIsMobile } from '@/hooks/use-media-query';
+import { cn } from '@/utils/cn';
 
 /** Row heights mirror --row-h in globals.css so skeletons and rows agree. */
 const ROW_HEIGHT = { comfortable: 44, compact: 34, mobile: 68 };
@@ -196,7 +197,11 @@ export function MailList({ title, route, folder, folderReady, roles, folders, ba
       ) : (
         <div
           ref={parentRef}
-          className="min-h-0 flex-1 scrollbar-thin overflow-y-auto overscroll-contain"
+          className={cn(
+            'min-h-0 flex-1 scrollbar-thin overflow-y-auto overscroll-contain',
+            // Room for the floating Compose button over the last row.
+            isMobile && 'pb-24'
+          )}
           role="list"
           aria-label={`${title} ${noun}s`}
         >
@@ -227,6 +232,7 @@ export function MailList({ title, route, folder, folderReady, roles, folders, ba
                     focused={focusedIndex === virtualRow.index}
                     showPreview={showPreview}
                     isMobile={isMobile}
+                    selectionMode={selected.size > 0}
                     showFolder={route.role === 'starred' || route.view === 'search'}
                     onToggleSelect={() => toggleSelected(item.id)}
                     onOpen={() => openItem(item)}
@@ -264,6 +270,18 @@ export function MailList({ title, route, folder, folderReady, roles, folders, ba
           ) : null}
         </div>
       )}
+
+      {/* On phones Compose otherwise lives behind the folder drawer. */}
+      {isMobile && selected.size === 0 ? (
+        <Button
+          variant="primary"
+          onClick={() => openCompose()}
+          data-testid="compose-fab"
+          className="rounded-pill shadow-overlay fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-30 h-12 gap-2 px-5"
+        >
+          <Pencil /> Compose
+        </Button>
+      ) : null}
     </div>
   );
 }

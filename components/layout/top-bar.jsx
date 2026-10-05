@@ -94,7 +94,7 @@ export function TopBar({ user, isAdmin }) {
         aria-label="OsmicMails — go to Inbox"
         className="focus-visible:outline-focus rounded-control flex h-8 shrink-0 items-center px-1.5 focus-visible:outline-2 focus-visible:outline-offset-2 md:w-[calc(var(--rail-w)-0.5rem)]"
       >
-        <Logo showText />
+        <Logo showText textClassName="hidden sm:inline" />
       </Link>
 
       <div className="md:pl-gutter flex min-w-0 flex-1 items-center">

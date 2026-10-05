@@ -25,6 +25,8 @@ const smtpHost = process.env.MAIL_SMTP_HOST;
 const smtpPort = Number(process.env.MAIL_SMTP_PORT || 587);
 const smtpSecure = bool(process.env.MAIL_SMTP_SECURE, false);
 const rejectUnauthorized = bool(process.env.MAIL_TLS_REJECT_UNAUTHORIZED, true);
+// Internal hosts (dovecot-mailcow) still verify the public certificate name.
+const servername = process.env.MAIL_TLS_SERVERNAME || undefined;
 
 let failed = false;
 
@@ -34,6 +36,7 @@ const client = new ImapFlow({
   host: imapHost,
   port: imapPort,
   secure: imapTls,
+  servername,
   auth: { user, pass },
   logger: false,
   tls: { rejectUnauthorized },
@@ -61,6 +64,7 @@ const transport = nodemailer.createTransport({
   host: smtpHost,
   port: smtpPort,
   secure: smtpSecure,
+  servername,
   requireTLS: !smtpSecure,
   auth: { user, pass },
   tls: { rejectUnauthorized },

@@ -5,8 +5,10 @@ import { toast } from 'sonner';
 import { Paperclip, X, AlertCircle } from 'lucide-react';
 import { formatBytes } from '@/utils/format';
 import { cn } from '@/utils/cn';
+import { useSession } from '@/hooks/use-session';
 
-const MAX_MB = Number(process.env.NEXT_PUBLIC_MAX_ATTACHMENT_SIZE_MB || 50);
+/** Used until the session (which carries the server's real limit) has loaded. */
+const DEFAULT_MAX_BYTES = 50 * 1024 * 1024;
 
 /**
  * Upload state for one compose window. Files stream to the server over XHR so
@@ -15,12 +17,15 @@ const MAX_MB = Number(process.env.NEXT_PUBLIC_MAX_ATTACHMENT_SIZE_MB || 50);
 export function useAttachmentUploads(windowId) {
   const [uploads, setUploads] = useState([]);
   const xhrs = useRef(new Map());
+  // The server's MAX_ATTACHMENT_SIZE_MB, read at runtime so prebuilt images honour it.
+  const { data: session } = useSession();
+  const maxBytes = session?.limits?.maxAttachmentBytes || DEFAULT_MAX_BYTES;
 
   const addFiles = useCallback(
     (files) => {
       for (const file of files) {
-        if (file.size > MAX_MB * 1024 * 1024) {
-          toast.error(`${file.name} is larger than the ${MAX_MB} MB limit.`);
+        if (file.size > maxBytes) {
+          toast.error(`${file.name} is larger than the ${formatBytes(maxBytes)} limit.`);
           continue;
         }
         const id = `${windowId}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -89,7 +94,7 @@ export function useAttachmentUploads(windowId) {
         xhr.send(form);
       }
     },
-    [windowId]
+    [windowId, maxBytes]
   );
 
   const removeUpload = useCallback((id) => {

@@ -5,12 +5,13 @@ import { getConfig } from '@/lib/config/env';
 
 /** GET /api/auth/session — the active mailbox, its preferences and signatures. */
 export const GET = createHandler(async ({ session }) => {
-  const { app } = getConfig();
+  const { app, limits } = getConfig();
   return json({
     user: { email: session.email, isAdmin: app.adminEmails.includes(session.email) },
     session: { id: session.id, createdAt: session.createdAt, expiresAt: session.expiresAt },
     accounts: session.accounts.map((a) => a.email),
     preferences: getPreferences(session.email),
     signatures: listSignatures(session.email),
+    limits: { maxAttachmentBytes: limits.maxAttachmentBytes },
   });
 });

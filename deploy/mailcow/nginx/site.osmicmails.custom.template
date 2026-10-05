@@ -1,0 +1,14 @@
+# OsmicMails replaces SOGo's web interface.
+# Installed as data/conf/nginx/site.osmicmails.custom in your mailcow-dockerized
+# folder; mailcow includes it in its own server blocks.
+#
+# Only the entry points of SOGo's web UI are redirected (exact matches win over
+# mailcow's /SOGo prefix location), so the "Webmail" links in mailcow send
+# users to OsmicMails. CalDAV/CardDAV (/SOGo/dav, /.well-known/caldav) and
+# ActiveSync keep working if you still run SOGo for calendars and contacts.
+# Delete this file to bring SOGo's web UI back.
+
+location = /SOGo { return 302 https://__WEBMAIL_HOSTNAME__/; }
+location = /SOGo/ { return 302 https://__WEBMAIL_HOSTNAME__/; }
+location = /SOGo/so { return 302 https://__WEBMAIL_HOSTNAME__/; }
+location = /SOGo/so/ { return 302 https://__WEBMAIL_HOSTNAME__/; }

@@ -2,6 +2,13 @@
   "name": "osmicmails",
   "version": "0.2.0",
   "private": true,
+  "license": "MIT",
+  "homepage": "https://github.com/CraftedByAli/webmail#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CraftedByAli/webmail.git"
+  },
+  "bugs": "https://github.com/CraftedByAli/webmail/issues",
   "description": "OsmicMails — multi-mailbox business webmail for Mailcow (IMAP/SMTP/ManageSieve), built with Next.js",
   "type": "module",
   "engines": {

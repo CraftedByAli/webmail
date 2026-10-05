@@ -11,7 +11,9 @@ import {
   Star,
   ChevronDown,
   Inbox,
-  PanelLeft,
+  X,
+  MoreVertical,
+  Folder,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { IconButton } from '@/components/ui/icon-button';
@@ -20,6 +22,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MoveMenu } from '@/components/mail/move-menu';
@@ -59,7 +65,6 @@ export function MailToolbar({
 }) {
   const selectMany = useUiStore((s) => s.selectMany);
   const clearSelection = useUiStore((s) => s.clearSelection);
-  const toggleSidebar = useUiStore((s) => s.toggleSidebar);
   const hasSelection = selectedCount > 0;
   const isTrash = folder === roles?.trash;
   const isJunk = folder === roles?.junk;
@@ -70,17 +75,20 @@ export function MailToolbar({
       data-chrome
       className="border-line bg-canvas px-gutter flex h-11 shrink-0 items-center gap-1 border-b"
     >
-      <IconButton
-        label="Show folders"
-        className="md:hidden"
-        onClick={toggleSidebar}
-        tooltip={false}
-      >
-        <PanelLeft />
-      </IconButton>
+      {/* Phones have no hover or keyboard: selection mode gets an explicit exit. */}
+      {hasSelection ? (
+        <IconButton
+          label="Cancel selection"
+          className="-ml-1 sm:hidden"
+          onClick={clearSelection}
+          tooltip={false}
+        >
+          <X />
+        </IconButton>
+      ) : null}
 
       <div className="flex shrink-0 items-center gap-0.5 pr-1">
-        <span className="hidden sm:block">
+        <span className={cn(hasSelection ? 'block' : 'hidden sm:block')}>
           <Checkbox
             checked={allSelected ? true : hasSelection ? 'indeterminate' : false}
             onCheckedChange={(v) => onSelectAll(v === true)}
@@ -190,6 +198,14 @@ export function MailToolbar({
               </IconButton>
             </MoveMenu>
           </span>
+          <MobileMoreActions
+            folders={folders}
+            folder={folder}
+            onRead={onRead}
+            onUnread={onUnread}
+            onStar={onStar}
+            onMove={onMove}
+          />
           <span
             className="text-caption text-fg-secondary ml-auto pl-2 whitespace-nowrap"
             aria-live="polite"
@@ -216,5 +232,49 @@ export function MailToolbar({
         </div>
       )}
     </div>
+  );
+}
+
+/** The secondary bulk actions, folded into one menu where they would not fit. */
+function MobileMoreActions({ folders = [], folder, onRead, onUnread, onStar, onMove }) {
+  const targets = folders.filter(
+    (f) => f.selectable && f.path !== folder && f.role !== 'drafts' && f.role !== 'sent'
+  );
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <IconButton label="More actions" className="sm:hidden" tooltip={false}>
+          <MoreVertical />
+        </IconButton>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-56">
+        <DropdownMenuItem onSelect={onRead}>
+          <MailOpen /> Mark as read
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={onUnread}>
+          <Mail /> Mark as unread
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={onStar}>
+          <Star /> Star
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <FolderInput /> Move to
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="max-h-[60vh] w-52 overflow-y-auto">
+            {targets.map((f) => (
+              <DropdownMenuItem key={f.path} onSelect={() => onMove(f.path)}>
+                <Folder />
+                <span className="truncate">{f.name}</span>
+              </DropdownMenuItem>
+            ))}
+            {targets.length === 0 ? (
+              <DropdownMenuItem disabled>No other folders</DropdownMenuItem>
+            ) : null}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

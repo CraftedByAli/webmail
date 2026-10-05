@@ -312,7 +312,12 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false, showF
         dragging && 'ring-accent ring-2 ring-inset'
       )}
     >
-      <header className="border-line bg-canvas flex h-10 shrink-0 items-center gap-0.5 border-b pr-1 pl-3">
+      <header
+        className={cn(
+          'border-line bg-canvas flex shrink-0 items-center gap-0.5 border-b pr-1 pl-3',
+          mobile ? 'safe-top min-h-12' : 'h-10'
+        )}
+      >
         <h2 className="text-ui text-fg min-w-0 flex-1 truncate font-medium">
           {data.subject || title}
           {showFrom && win.account ? (
@@ -449,7 +454,12 @@ export function ComposeWindow({ win, mobile = false, minimizedBar = false, showF
             ) : null}
           </div>
 
-          <footer className="border-line flex shrink-0 items-center gap-1 border-t px-3 py-2">
+          <footer
+            className={cn(
+              'border-line flex shrink-0 items-center gap-1 border-t px-3 py-2',
+              mobile && 'pb-[calc(0.5rem+env(safe-area-inset-bottom))]'
+            )}
+          >
             <div className="flex items-center">
               <Button
                 variant="primary"

@@ -25,6 +25,9 @@ export const viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
+  // Android: shrink the layout when the keyboard opens so the full-screen
+  // compose window keeps its Send bar visible. iOS ignores it.
+  interactiveWidget: 'resizes-content',
 };
 
 export default async function RootLayout({ children }) {

@@ -1,8 +1,9 @@
 'use client';
 
-import { memo } from 'react';
-import { Star, Paperclip, Archive, Trash2, MailOpen, Mail } from 'lucide-react';
+import { memo, useRef } from 'react';
+import { Star, Paperclip, Archive, Trash2, MailOpen, Mail, Check } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Avatar } from '@/components/ui/avatar';
 import { cn } from '@/utils/cn';
 import { formatListDate, participantsLabel } from '@/utils/format';
 
@@ -19,7 +20,12 @@ import { formatListDate, participantsLabel } from '@/utils/format';
  *    scan sender → subject → date without re-anchoring.
  *
  * Memoised: the virtualiser re-renders this constantly while scrolling.
+ *
+ * Touch: there is no hover and no checkbox column on phones, so the avatar is
+ * the selection target, a long press selects too, and while anything is
+ * selected a tap toggles selection instead of opening the conversation.
  */
+const LONG_PRESS_MS = 450;
 export const MailRow = memo(function MailRow({
   item,
   me,
@@ -27,6 +33,7 @@ export const MailRow = memo(function MailRow({
   focused,
   showPreview,
   isMobile,
+  selectionMode,
   showFolder,
   onToggleSelect,
   onOpen,
@@ -50,6 +57,11 @@ export const MailRow = memo(function MailRow({
   const date = formatListDate(item.date, prefs?.general);
   const isDraft = !isThread && item.flags?.draft;
 
+  const press = useLongPress(isMobile ? onToggleSelect : null);
+  const firstSender = isThread
+    ? item.participants?.find((p) => p.address !== me) || item.participants?.[0]
+    : item.from;
+
   const stop = (fn) => (e) => {
     e.stopPropagation();
     e.preventDefault();
@@ -64,12 +76,17 @@ export const MailRow = memo(function MailRow({
       data-testid="mail-row"
       data-unread={unread ? 'true' : undefined}
       aria-label={`${unread ? 'Unread. ' : ''}${sender}. ${subject}. ${date}`}
-      draggable
+      draggable={!isMobile}
       onDragStart={(e) => {
         e.dataTransfer.setData('application/x-webmail-messages', JSON.stringify(dragPayload));
         e.dataTransfer.effectAllowed = 'move';
       }}
-      onClick={onOpen}
+      onClick={() => {
+        if (press.consumeClick()) return;
+        if (isMobile && selectionMode) onToggleSelect();
+        else onOpen();
+      }}
+      {...press.handlers}
       onKeyDown={(e) => {
         if (e.key === 'Enter') onOpen();
       }}
@@ -77,6 +94,7 @@ export const MailRow = memo(function MailRow({
       onMouseEnter={onFocus}
       className={cn(
         'group focus-inset border-line px-gutter text-ui relative flex h-full cursor-pointer items-center gap-2 border-b transition-colors duration-100',
+        isMobile && 'gap-3 select-none [-webkit-touch-callout:none]',
         'before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:content-[""]',
         unread ? 'before:bg-accent' : 'before:bg-transparent',
         selected ? 'bg-accent-subtle' : 'bg-surface hover:bg-hover',
@@ -105,6 +123,28 @@ export const MailRow = memo(function MailRow({
       >
         <Star className={cn('size-4', starred && 'fill-current')} />
       </button>
+
+      {isMobile ? (
+        <button
+          type="button"
+          onClick={stop(() => {
+            if (!press.consumeClick()) onToggleSelect();
+          })}
+          aria-label={
+            selected ? `Deselect conversation from ${sender}` : `Select conversation from ${sender}`
+          }
+          aria-pressed={selected}
+          className="rounded-pill focus-visible:outline-focus -my-1 shrink-0 p-1 focus-visible:outline-2"
+        >
+          {selected ? (
+            <span className="bg-accent text-on-accent rounded-pill grid size-9 place-items-center">
+              <Check className="size-4" />
+            </span>
+          ) : (
+            <Avatar address={firstSender} size="lg" />
+          )}
+        </button>
+      ) : null}
 
       {isMobile ? (
         <div className="flex min-w-0 flex-1 flex-col justify-center py-1.5">
@@ -234,4 +274,53 @@ function RowAction({ label, title, onClick, children }) {
       {children}
     </button>
   );
+}
+
+/**
+ * Long-press detection for touch rows. Movement cancels it (the user is
+ * scrolling), and the click that follows a long press is swallowed so the
+ * row does not also open.
+ */
+function useLongPress(onLongPress) {
+  const timer = useRef(null);
+  const start = useRef(null);
+  const fired = useRef(false);
+
+  const cancel = () => {
+    clearTimeout(timer.current);
+    timer.current = null;
+  };
+
+  if (!onLongPress) return { handlers: {}, consumeClick: () => false };
+
+  return {
+    consumeClick() {
+      const was = fired.current;
+      fired.current = false;
+      return was;
+    },
+    handlers: {
+      onPointerDown(e) {
+        if (e.pointerType === 'mouse') return;
+        fired.current = false;
+        start.current = { x: e.clientX, y: e.clientY };
+        cancel();
+        timer.current = setTimeout(() => {
+          fired.current = true;
+          navigator.vibrate?.(10);
+          onLongPress();
+        }, LONG_PRESS_MS);
+      },
+      onPointerMove(e) {
+        if (!timer.current || !start.current) return;
+        if (Math.hypot(e.clientX - start.current.x, e.clientY - start.current.y) > 10) cancel();
+      },
+      onPointerUp: cancel,
+      onPointerCancel: cancel,
+      onContextMenu(e) {
+        // Android fires contextmenu on long press; the selection already happened.
+        if (fired.current || timer.current) e.preventDefault();
+      },
+    },
+  };
 }
