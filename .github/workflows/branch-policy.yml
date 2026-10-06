@@ -1,0 +1,30 @@
+name: Branch policy
+
+# main only receives releases from staging:
+#   feature/fix branch (or fork) ──PR──▶ staging ──PR (admin)──▶ main
+# This check is required on main, so a pull request from any other branch
+# (or from a fork) cannot be merged into main by accident.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  source-branch:
+    name: Source branch is staging
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the pull request comes from this repository's staging branch
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_REPO: ${{ github.repository }}
+        run: |
+          if [ "$HEAD_REF" = "staging" ] && [ "$HEAD_REPO" = "$BASE_REPO" ]; then
+            echo "OK: $HEAD_REPO:$HEAD_REF -> main"
+            exit 0
+          fi
+          echo "::error::Pull requests into main must come from the staging branch of $BASE_REPO (got $HEAD_REPO:$HEAD_REF). Open your pull request against staging instead."
+          exit 1
