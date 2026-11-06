@@ -4,7 +4,7 @@
     {
       "name": "webmail-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "--port", "3100"],
+      "runtimeArgs": ["--prefix", "apps/web", "run", "dev", "--", "--port", "3100"],
       "port": 3100
     }
   ]

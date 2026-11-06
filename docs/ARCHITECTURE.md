@@ -24,6 +24,9 @@ opaque session cookie.
 
 ## Directory layout
 
+The app lives in `apps/web/`; the paths below are relative to it. How it runs on the OsmicSoft server is in
+`deploy/server/` (see its README); the self-hosting compose files are at the repository root.
+
 | Path                                           | Responsibility                                                                                                        |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `app/(auth)/login`                             | Sign-in page.                                                                                                         |

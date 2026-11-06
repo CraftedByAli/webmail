@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Forced command for the GitHub Actions deploy key of webmail (webmail.osmicsoft.com). Installed on the server as
+# /usr/local/bin/webmail-ci-deploy; /home/webmail/.ssh/authorized_keys pins the key
+# to one environment: restrict,command="/usr/local/bin/webmail-ci-deploy production".
+#
+# .github/workflows/deploy.yml sends exactly:
+#   deploy <40-hex commit sha>
+# The commit must be on the environment's branch (production: main). This runs the deploy
+# itself — the incoming string is never passed to a shell.
+set -euo pipefail
+ENV="${1:?usage: webmail-ci-deploy <production>}"
+case "$ENV" in
+  production) BRANCH=main ;;
+  *) echo "bad environment" >&2; exit 2 ;;
+esac
+DIR="/srv/apps/webmail/$ENV"
+LOG="/var/log/webmail/deploy-$ENV.log"
+CMD="${SSH_ORIGINAL_COMMAND:-}"
+if [[ ! "$CMD" =~ ^deploy\ ([0-9a-f]{40})$ ]]; then
+  echo "$(date -Is) REFUSED: $CMD" >> "$LOG"
+  echo "webmail-ci-deploy: command refused (only '$ENV' deploys of a commit are allowed with this key)" >&2
+  exit 1
+fi
+SHA="${BASH_REMATCH[1]}"
+{
+  echo "$(date -Is) deploy $ENV $SHA"
+  cd "$DIR"
+  git fetch --prune origin
+  if ! git merge-base --is-ancestor "$SHA" "origin/$BRANCH"; then
+    echo "webmail-ci-deploy: $SHA is not on origin/$BRANCH — refusing to deploy it to $ENV" >&2
+    exit 1
+  fi
+  git checkout --force --detach "$SHA"
+  deploy/server/scripts/deploy.sh "$ENV"
+} 2>&1 | tee -a "$LOG"
+exit "${PIPESTATUS[0]}"

@@ -1,0 +1,33 @@
+# webmail.osmicsoft.com — OsmicMails webmail for the Mailcow server, as it runs on the OsmicSoft server.
+# Always run through deploy/server/scripts/deploy.sh (or with the same flags it uses):
+#   docker compose --project-directory deploy/server -f deploy/server/compose.yml \
+#     --env-file deploy/server/<env>/compose.env …
+# The project name stays `webmail`, so the data volume is `webmail_webmail-data` (SQLite + uploads).
+# Self-hosting elsewhere: use the docker-compose*.yml files at the repo root instead (README.md).
+name: ${COMPOSE_PROJECT_NAME:?COMPOSE_PROJECT_NAME is not set (deploy/server/<env>/compose.env)}
+
+services:
+  web:
+    build:
+      context: ../../apps/web
+      args:
+        APP_VERSION: ${APP_VERSION:-unknown}
+    image: webmail-${DEPLOY_ENV:?DEPLOY_ENV is not set}-web:latest
+    restart: unless-stopped
+    env_file: ${DEPLOY_ENV}/app.env
+    environment:
+      NODE_ENV: production
+      DATABASE_PATH: /data/webmail.db
+      UPLOAD_DIR: /data/uploads
+    ports:
+      - "127.0.0.1:${WEB_PORT:?WEB_PORT is not set (deploy/server/<env>/compose.env)}:3000"
+    volumes:
+      - webmail-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  webmail-data:

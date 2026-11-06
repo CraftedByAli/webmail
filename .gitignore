@@ -5,10 +5,12 @@ dist
 coverage
 playwright-report
 test-results
-data/*.db
-data/*.db-*
-data/uploads
-data/*-uploads
+apps/web/data/*.db
+apps/web/data/*.db-*
+apps/web/data/uploads
+apps/web/data/*-uploads
+# Server settings (deploy/server/<env>/*.env.example are the templates)
+deploy/server/*/*.env
 .env
 .env.local
 .env.*.local
