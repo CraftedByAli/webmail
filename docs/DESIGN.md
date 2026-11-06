@@ -150,7 +150,7 @@ The hardest problem in a webmail, and the reason for a dedicated pipeline.
 
 Email carries its own colours. Inverting them produces half-broken output; not
 handling them produces black-on-black. So the server classifies each message
-(`lib/mime/html-analysis.js`) and the viewer renders it one of two ways:
+(`apps/web/lib/mime/html-analysis.js`) and the viewer renders it one of two ways:
 
 | Mode     | When                                                                                               | How it renders                                                                                                                                            |
 | -------- | -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |

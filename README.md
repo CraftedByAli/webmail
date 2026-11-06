@@ -97,9 +97,9 @@ fork ─▶ branch from staging ─▶ PR into staging ─▶ review + CI ─▶
 
 1. **Fork** the repository and clone your fork.
 2. **Create a branch from `staging`**: `git switch -c feat/my-change upstream/staging`.
-3. **Set up locally** with no mail server needed: `npm ci`, `cp .env.example .env`, set `MAIL_PROVIDER=mock`,
+3. **Set up locally** with no mail server needed: in `apps/web/`, `npm ci`, `cp .env.example .env`, set `MAIL_PROVIDER=mock`,
    `npm run dev`, sign in as `test@example.com` / `password123`.
-4. **Run the checks**: `npm run lint && npm run format:check && npm test && npm run test:integration` (and
+4. **Run the checks** (in `apps/web/`): `npm run lint && npm run format:check && npm test && npm run test:integration` (and
    `npm run test:e2e` for UI changes).
 5. **Open a pull request with base `staging`** and fill in the template.
 
@@ -149,7 +149,7 @@ Stars, bug reports and pull requests all help the project grow.
 
 ```bash
 git clone <this repository> webmail
-cd webmail
+cd webmail/apps/web      # the app lives in apps/web; run npm and its .env from there
 npm ci
 cp .env.example .env
 # edit .env — at minimum MAIL_IMAP_HOST, MAIL_SMTP_HOST and SESSION_SECRET
@@ -164,7 +164,7 @@ MAIL_USER=you@example.com MAIL_PASS='your-password' npm run check:mailcow
 
 ## Environment variables
 
-All configuration comes from the environment (see [`.env.example`](.env.example)). Nothing is hard-coded.
+All configuration comes from the environment (see [`apps/web/.env.example`](apps/web/.env.example)). Nothing is hard-coded.
 
 | Variable                          | Default                        | Description                                                                                                   |
 | --------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------- |
@@ -204,6 +204,8 @@ All configuration comes from the environment (see [`.env.example`](.env.example)
 
 ## Local development
 
+From `apps/web/`:
+
 ```bash
 npm run dev            # http://localhost:3000
 npm run lint
@@ -221,7 +223,7 @@ MAIL_PROVIDER=mock npm run dev
 ## Docker
 
 ```bash
-cp .env.example .env    # configure
+cp apps/web/.env.example apps/web/.env    # configure (docker-compose.yml reads apps/web/.env)
 docker compose up -d --build
 curl http://127.0.0.1:3000/api/ready
 ```
@@ -275,7 +277,7 @@ Recommended:
 ## Production deployment
 
 1. Provision a host with Docker (or Node 24) and DNS `webmail.example.com` → host.
-2. Create `.env` with `APP_URL=https://webmail.example.com`, a strong `SESSION_SECRET`, Mailcow hosts,
+2. Create `apps/web/.env` with `APP_URL=https://webmail.example.com`, a strong `SESSION_SECRET`, Mailcow hosts,
    `LOG_FORMAT=json`.
 3. `docker compose -f docker-compose.yml -f docker-compose.production.yml up -d`.
 4. Put a TLS-terminating reverse proxy in front:
@@ -293,7 +295,7 @@ Recommended:
    Sign in as an address in `ADMIN_EMAILS` and open **Diagnostics** from the account menu for IMAP/SMTP latency,
    connection pool and realtime status.
 
-Without Docker: `npm ci && npm run build && NODE_ENV=production npm start` behind the same proxy, managed by
+Without Docker: `cd apps/web && npm ci && npm run build && NODE_ENV=production npm start` behind the same proxy, managed by
 systemd or pm2.
 
 ### Behind a reverse proxy
@@ -302,6 +304,8 @@ The app trusts `X-Forwarded-Proto`, `X-Forwarded-Host`, `X-Forwarded-For` / `X-R
 proxy. Make sure the proxy sets them and that the app is **only** reachable through the proxy.
 
 ## Testing
+
+From `apps/web/`:
 
 ```bash
 npm test                  # unit tests (Vitest): IMAP service, SMTP composer, MIME, threading, sanitizer, auth, search…

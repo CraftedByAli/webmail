@@ -15,7 +15,7 @@ what operators must do.
 | Clickjacking                              | `frame-ancestors 'none'`, `X-Frame-Options: DENY`.                                                                                                                                                                                                                          |
 | Brute force                               | Login throttling per IP (8/15 min) and per account (12/15 min), general API limit, send/upload limits. Failed attempts recorded. The client IP is read `TRUST_PROXY_HOPS` entries from the right of `X-Forwarded-For`, so clients cannot spoof it.                          |
 | Malicious attachments                     | Content type detected from magic bytes (never trusted from client), executable extensions refused, downloads served with `nosniff`, `Content-Disposition: attachment` for anything not inline-safe, HTML/SVG/XML never served inline, size limits enforced while streaming. |
-| Path traversal                            | Uploads stored under `UPLOAD_DIR/<session id>/<random id>`; filenames sanitized (`lib/security/filename.js`); IMAP part numbers validated (`^[0-9.]+$`).                                                                                                                    |
+| Path traversal                            | Uploads stored under `UPLOAD_DIR/<session id>/<random id>`; filenames sanitized (`apps/web/lib/security/filename.js`); IMAP part numbers validated (`^[0-9.]+$`).                                                                                                                    |
 | SSRF / arbitrary server access            | IMAP/SMTP hosts come only from environment; the server never fetches URLs from email content; inline images are only served from the user's own mailbox.                                                                                                                    |
 | Session fixation / replay                 | Random 256-bit tokens, sliding expiration, per-session revocation, "sign out everywhere", login history.                                                                                                                                                                    |
 | Information leakage                       | User-facing errors are generic; details go to server logs with passwords, tokens and cookies redacted; health endpoints expose booleans only; diagnostics require `ADMIN_EMAILS`.                                                                                           |
@@ -41,7 +41,7 @@ Additional headers: `Strict-Transport-Security` (production), `X-Content-Type-Op
 
 ## Email HTML rendering
 
-1. `lib/security/sanitize-html.js` removes `script`, `style`, `iframe`, `object`, `embed`, `form`, `input`, `meta`,
+1. `apps/web/lib/security/sanitize-html.js` removes `script`, `style`, `iframe`, `object`, `embed`, `form`, `input`, `meta`,
    `link`, `base`, all `on*` handlers, `javascript:`/`vbscript:`/`data:` (except base64 images) URLs, CSS `expression()`,
    `behavior`, `@import`, `-moz-binding`, `position: fixed/sticky`, remote `url()`.
 2. Links get `target="_blank" rel="noopener noreferrer nofollow"`.

@@ -8,7 +8,9 @@ import {
   renderTemplate,
 } from '@/components/docs/snippets';
 
-const read = (p) => fs.readFileSync(p, 'utf8');
+// deploy/mailcow lives at the repository root, outside apps/web.
+const REPO_ROOT = new URL('../../../../', import.meta.url);
+const read = (p) => fs.readFileSync(new URL(p, REPO_ROOT), 'utf8');
 
 describe('docs show the shipped Mailcow files verbatim', () => {
   it.each([

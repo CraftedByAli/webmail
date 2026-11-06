@@ -2,11 +2,11 @@
 # container reaches Mailcow over the network using the hosts in .env.
 services:
   webmail:
-    build: .
+    build: ./apps/web
     image: osmicmails:local
     container_name: webmail
     restart: unless-stopped
-    env_file: .env
+    env_file: apps/web/.env
     environment:
       NODE_ENV: production
       DATABASE_PATH: /data/webmail.db

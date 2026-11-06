@@ -1,20 +1,20 @@
 # Testing
 
-All suites run without a mail server by using `MockMailProvider` (`lib/mail/mock-provider.js`), an in-memory
+All suites run without a mail server by using `MockMailProvider` (`apps/web/lib/mail/mock-provider.js`), an in-memory
 implementation of the `MailProvider` contract seeded with deterministic messages (a thread, an HTML message with a
 tracking pixel and a script, attachments, 60 newsletters, custom folder).
 
 | Command                    | What it covers                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm test`                 | **Unit** (Vitest, `tests/unit`): threading, search parser + IMAP compiler, HTML sanitizer, addresses, crypto + sessions, CSRF, rate limiter, filenames, MIME detection, BODYSTRUCTURE walker, charset/flowed decoding, previews, MIME build/parse round-trip, folder role detection, `ImapClient` against a fake `ImapFlow`, connection manager.                                                                                                                                                          |
-| `npm run test:integration` | **Integration** (Vitest, `tests/integration/api.test.js`): calls the real route handlers in-process — login, CSRF, throttling, sessions, folders, inbox paging, message read, thread, attachments (upload/validation/download/inline), send with attachments, reply headers, forward, drafts (no duplicates / restore / delete / consumed on send), flag/archive/spam/trash/delete/move actions, search, folder CRUD, preferences, contacts + suggestions, signatures, health/ready/diagnostics.          |
-| `npm run test:e2e`         | **End-to-end** (Playwright, `tests/e2e`): builds a production bundle, starts `next start` with the mock provider and drives Chromium (desktop + Pixel 7): login → inbox → open email (sandboxed iframe, blocked images) → reply → autosave → send → verify in thread and Sent; compose with autocomplete, Cc and file attachment + download; search/archive/delete with optimistic UI; keyboard shortcuts; folder creation, settings, sessions; real-time arrival; mobile drawer and full-screen compose. |
+| `npm test`                 | **Unit** (Vitest, `apps/web/tests/unit`): threading, search parser + IMAP compiler, HTML sanitizer, addresses, crypto + sessions, CSRF, rate limiter, filenames, MIME detection, BODYSTRUCTURE walker, charset/flowed decoding, previews, MIME build/parse round-trip, folder role detection, `ImapClient` against a fake `ImapFlow`, connection manager.                                                                                                                                                          |
+| `npm run test:integration` | **Integration** (Vitest, `apps/web/tests/integration/api.test.js`): calls the real route handlers in-process — login, CSRF, throttling, sessions, folders, inbox paging, message read, thread, attachments (upload/validation/download/inline), send with attachments, reply headers, forward, drafts (no duplicates / restore / delete / consumed on send), flag/archive/spam/trash/delete/move actions, search, folder CRUD, preferences, contacts + suggestions, signatures, health/ready/diagnostics.          |
+| `npm run test:e2e`         | **End-to-end** (Playwright, `apps/web/tests/e2e`): builds a production bundle, starts `next start` with the mock provider and drives Chromium (desktop + Pixel 7): login → inbox → open email (sandboxed iframe, blocked images) → reply → autosave → send → verify in thread and Sent; compose with autocomplete, Cc and file attachment + download; search/archive/delete with optimistic UI; keyboard shortcuts; folder creation, settings, sessions; real-time arrival; mobile drawer and full-screen compose. |
 
 First run: `npx playwright install chromium`.
 
 ## Live Mailcow tests
 
-`tests/integration/imap-live.test.js` is skipped unless credentials are provided. It authenticates, lists folders,
+`apps/web/tests/integration/imap-live.test.js` is skipped unless credentials are provided. It authenticates, lists folders,
 lists/reads the inbox, saves and deletes a draft and runs a search against a **real** mailbox (read-only apart from the
 draft):
 

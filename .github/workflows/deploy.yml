@@ -1,0 +1,57 @@
+name: Deploy
+
+# Every commit on `main` that passes CI goes to https://webmail.osmicsoft.com. GitHub connects as the
+# server's `webmail` user with the production key, which can only run
+# /usr/local/bin/webmail-ci-deploy production: it checks the commit is on main, checks it
+# out in /srv/apps/webmail/production and runs deploy/server/scripts/deploy.sh there
+# (deploy/server/README.md).
+#
+# The `production` GitHub environment needs the secret DEPLOY_SSH_KEY: the private key
+# /root/.credentials/webmail/actions-production on the server.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to production
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    environment:
+      name: production
+      url: https://webmail.osmicsoft.com
+    env:
+      SERVER: 84.46.241.238
+      # The server's SSH host key, so the connection cannot be intercepted.
+      HOST_KEY: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFZvGhiQSbkALflPmvJYap2jKr/zSELdBngb1TwVyGg1
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - name: Check configuration
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::error::The production environment has no DEPLOY_SSH_KEY secret (deploy/server/README.md → GitHub setup)."
+            exit 1
+          fi
+      - name: Deploy ${{ env.SHA }}
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          echo "$SERVER $HOST_KEY" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 \
+            "webmail@$SERVER" "deploy $SHA"

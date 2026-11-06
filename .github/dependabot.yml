@@ -1,7 +1,7 @@
 version: 2
 updates:
   - package-ecosystem: npm
-    directory: /
+    directory: /apps/web
     target-branch: staging
     schedule:
       interval: weekly
@@ -15,7 +15,7 @@ updates:
     schedule:
       interval: monthly
   - package-ecosystem: docker
-    directory: /
+    directory: /apps/web
     target-branch: staging
     schedule:
       interval: monthly
